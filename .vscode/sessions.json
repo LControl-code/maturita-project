@@ -6,51 +6,40 @@
   "keepExistingTerminals": false,
   "sessions": {
     "default": [
-      {
-        "name": "hello",
-        "autoExecuteCommands": true,
-        "icon": "person",
-        "color": "terminal.ansiGreen",
-        "commands": [
-          "echo hello"
-        ]
-      },
       [
         {
-          "name": "docker:ros",
+          "name": "Pocketbase Server",
+          "autoExecuteCommands": true,
+          "icon": "database",
           "commands": [
-            ""
+            "clear && /home/lcontrol/lcontrol-Projects/nextJS/delta-project/maturita-project/pocketbase serve"
           ]
         },
         {
-          "name": "docker:k8s",
+          "name": "Insert Fake Data",
+          "autoExecuteCommands": false,
+          "icon": "sync",
           "commands": [
-            ""
+            "clear && python3 /home/lcontrol/lcontrol-Projects/nextJS/delta-project/maturita-project/python_fake_data.py"
           ]
         }
       ],
       [
         {
-          "name": "docker:nats",
+          "name": "Next.js App",
+          "autoExecuteCommands": true,
           "commands": [
-            ""
+            "clear && npm run dev"
           ]
         },
         {
-          "name": "docker:fleet",
+          "name": "General",
+          "focus": true,
           "commands": [
             ""
           ]
         }
       ]
-    ],
-    "saved-session": [
-      {
-        "name": "connect",
-        "commands": [
-          ""
-        ]
-      }
     ]
   }
 }
