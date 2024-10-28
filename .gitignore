@@ -69,3 +69,6 @@ Thumbs.db
 /.expo
 /.expo-shared
 /.other
+python_fake_data.py
+pb_data/data.db
+pb_data/logs.db

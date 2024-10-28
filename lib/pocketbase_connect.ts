@@ -1,15 +1,23 @@
 import { FailsData, TestRecord } from "@/types/api";
 import { trackDevice, trackStation, trackTest } from '@/types/device';
-import { ErrorData } from "@/types/errors"
+import { ErrorData } from "@/types/errors";
+import { TypedPocketBase, Collections, StationS02Record, StationS02LimitsRecord, LiveErrorsResponse } from "@/types/pocketbase-types";
 
 import PocketBase from "pocketbase";
 
 // Initialize client
-export const pb = new PocketBase("http://127.0.0.1:8090");
+export const pb = new PocketBase("http://127.0.0.1:8090") as TypedPocketBase;
 
 pb.autoCancellation(false);
 
-const collections = ['station_a20', 'station_a25', 'station_a26', 'station_s02', 'station_nvh', 'station_r23'];
+const collections = [
+  Collections.StationA20,
+  Collections.StationA25,
+  Collections.StationA26,
+  Collections.StationS02,
+  Collections.StationNvh,
+  Collections.StationR23,
+];
 
 interface BaseRecord {
   id?: string;
@@ -35,19 +43,19 @@ interface RecordsByStation {
 }
 
 export async function getStationData() {
-  const records = await pb.collection('station_s02').getList(1, 20, {
+  const records = await pb.collection(Collections.StationS02).getList<StationS02Record>(1, 20, {
     sort: '-created',
   });
   return records.items;
 }
 
 export async function getLimitsForMotorType(motorType?: 'EFAD' | 'ERAD' | 'Short') {
-  const limitsByStation: { [key: string]: Record[] } = {};
+  const limitsByStation: { [key: string]: StationS02LimitsRecord[] } = {};
 
   for (const collection of collections) {
     const limitsCollection = `${collection}_limits`;
     const filter = motorType ? `motor_type='${motorType}'` : '';
-    const limits: Record[] = await pb.collection(limitsCollection).getFullList({
+    const limits: StationS02LimitsRecord[] = await pb.collection(limitsCollection).getFullList({
       filter,
       cache: 'no-store',
     });
@@ -60,12 +68,12 @@ export async function getLimitsForMotorType(motorType?: 'EFAD' | 'ERAD' | 'Short
 
 export async function getTopFailsData() {
   const recordsByStation: { [key: string]: RecordsByStation } = {};
-  const limitsByStation: { [key: string]: Record[] } = await getLimitsForMotorType('EFAD');
+  const limitsByStation: { [key: string]: StationS02LimitsRecord[] } = await getLimitsForMotorType('EFAD');
 
   const today = new Date().toISOString().split('T')[0];
 
   for (const collection of collections) {
-    const records: Record[] = await pb.collection(collection).getFullList({
+    const records: StationS02Record[] = await pb.collection(collection).getFullList({
       sort: '-created',
       filter: `test_fail=true && time>='${today} 00:00:00' && time<='${today} 23:59:59'`,
     });
@@ -149,14 +157,14 @@ export async function getTopFailsData() {
 }
 
 export async function getFailedTestsGraphData() {
-  const recordsByStation: { [key: string]: Record[] } = {};
-  const limitsByStation: { [key: string]: Record[] } = {};
+  const recordsByStation: { [key: string]: StationS02Record[] } = {};
+  const limitsByStation: { [key: string]: StationS02LimitsRecord[] } = {};
   const today = new Date().toISOString().split('T')[0];
 
   // Fetch limits for each station first
   for (const collection of collections) {
     const limitsCollection = `${collection}_limits`;
-    const limits: Record[] = await pb.collection(limitsCollection).getFullList({
+    const limits: StationS02LimitsRecord[] = await pb.collection(limitsCollection).getFullList({
       filter: `motor_type='EFAD'`,
       cache: 'no-store',
     });
@@ -165,7 +173,7 @@ export async function getFailedTestsGraphData() {
 
   // Fetch records and filter based on limits
   for (const collection of collections) {
-    const records: Record[] = await pb.collection(collection).getFullList({
+    const records: StationS02Record[] = await pb.collection(collection).getFullList({
       sort: '-created',
       filter: `test_fail=true && time>='${today} 00:00:00' && time<='${today} 23:59:59'`,
     });
@@ -253,16 +261,16 @@ export async function getFailedTestsGraphData() {
 
 export async function getDeviceData(deviceCode: string): Promise<trackDevice> {
   const decodedDeviceCode = decodeURIComponent(deviceCode);
-  const deviceDataByStation: { [key: string]: Record | null } = {};
+  const deviceDataByStation: { [key: string]: StationS02Record | null } = {};
   const stations: trackStation[] = [];
   let motorType = '';
   let currentStation = '';
 
   // Get all station limits first
-  const limitsByStation: { [key: string]: Record[] } = {};
+  const limitsByStation: { [key: string]: StationS02LimitsRecord[] } = {};
   for (const collection of collections) {
     const limitsCollection = `${collection}_limits`;
-    const limits: Record[] = await pb.collection(limitsCollection).getFullList({
+    const limits: StationS02LimitsRecord[] = await pb.collection(limitsCollection).getFullList({
       filter: `motor_type='EFAD'`,
       cache: 'no-store',
     });
@@ -270,7 +278,7 @@ export async function getDeviceData(deviceCode: string): Promise<trackDevice> {
   }
 
   for (const collection of collections) {
-    const records: Record[] = await pb.collection(collection).getFullList({
+    const records: StationS02Record[] = await pb.collection(collection).getFullList({
       filter: `device_code='${decodedDeviceCode}'`,
       cache: 'no-store',
     });
@@ -347,25 +355,21 @@ export async function getDeviceData(deviceCode: string): Promise<trackDevice> {
   return deviceData;
 }
 
-
 export async function getLiveErrorsData(): Promise<ErrorData[]> {
-  // Calculate the timestamp for one hour ago
+  // Calculate the timestamp for 15 minutes ago
   const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString().replace('T', ' ').split('.')[0];
 
   try {
     // Fetch data from the live_errors collection
-    const records = await pb.collection('live_errors').getFullList({
-      filter: `created>='${fifteenMinutesAgo}' `,
+    const records = await pb.collection(Collections.LiveErrors).getFullList<LiveErrorsResponse>({
+      filter: `created>='${fifteenMinutesAgo}'`,
       fields: 'test_data',
       sort: '-created',
-      // cache: "no-store"
+      cache: 'no-store'
     });
 
     // Extract just the test_data from each record
-    const errorData = records.map(record => {
-      console.log(record.test_data);
-      return record.test_data;
-    });
+    const errorData: ErrorData[] = records.map(record => record.test_data);
 
     return errorData;
   } catch (error) {
