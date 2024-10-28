@@ -13,7 +13,7 @@ interface DeviceContextType {
 const DeviceContext = createContext<DeviceContextType | undefined>(undefined)
 
 const fetchDeviceData = async (deviceCode: string): Promise<Device> => {
-  const response = await fetch(`/api/data/device?deviceCode=${encodeURIComponent(deviceCode)}`)
+  const response = await fetch(`/api/data/devices/${encodeURIComponent(deviceCode)}`)
   if (!response.ok) {
     throw new Error('Failed to fetch device data')
   }

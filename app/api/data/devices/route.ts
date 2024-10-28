@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDeviceData } from '@/lib/pocketbase_connect'; // Assuming you have a function to get device data
+import { getDeviceData } from '@/lib/pocketbase_connect';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

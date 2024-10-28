@@ -25,6 +25,6 @@ export function middleware(request: NextRequest) {
 }
 export const config = {
   matcher: [
-    '/api/:path*', // Match all request paths starting with /api/
+    // '/api/:path*', // Match all request paths starting with /api/
   ],
 }

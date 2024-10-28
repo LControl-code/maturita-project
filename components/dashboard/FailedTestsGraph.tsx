@@ -21,7 +21,7 @@ interface FailedTestsGraphProps {
 const ITEMS_PER_PAGE = 10;
 
 const fetchTopFailsData = async (): Promise<FailsData> => {
-  const response = await fetch('/api/data/graph-fails', {
+  const response = await fetch('/api/data/tests/failed', {
     cache: 'no-store'
   });
   if (!response.ok) {
@@ -70,7 +70,7 @@ const FailedTestsGraph: React.FC<FailedTestsGraphProps> = ({ initialData }) => {
       const handler = setTimeout(fetchData, 5000);
       return () => clearTimeout(handler);
     }
-  }, [lastUpdate, fetchData]);
+  }, [lastUpdate]);
 
   const handleRefresh = useCallback(() => {
     fetchData();
@@ -132,6 +132,12 @@ const FailedTestsGraph: React.FC<FailedTestsGraphProps> = ({ initialData }) => {
     if (!selectedTest || !data || !data[selectedStation]) return 0;
     return Math.ceil(data[selectedStation][selectedTest].length / ITEMS_PER_PAGE);
   }, [data, selectedStation, selectedTest]);
+
+  const baseHeight = 100;
+  const heightPerTest = 20;
+
+  // Calculate the total height
+  const totalHeight = baseHeight + sortedDataArray.length * heightPerTest;
 
   return (
     <motion.div
@@ -204,14 +210,14 @@ const FailedTestsGraph: React.FC<FailedTestsGraphProps> = ({ initialData }) => {
                   No data available for this day.
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={400}>
+                <ResponsiveContainer width="100%" height={totalHeight}>
                   <BarChart
                     data={sortedDataArray}
                     layout="vertical"
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                   >
                     <XAxis type="number" domain={[0, maxFails]} />
-                    <YAxis dataKey="name" type="category" width={200} />
+                    <YAxis dataKey="name" type="category" width={200} interval={0} />
                     <Tooltip
                       formatter={(value, name, props) => [`${value} fails`, props.payload.name]}
                       labelFormatter={() => ''}

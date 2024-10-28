@@ -15,6 +15,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/' },
   { label: 'Devices', href: '/device' },
   { label: 'Stations', href: '/station' },
+  { label: 'Graphs', href: '/graph' },
 ]
 
 export const DesktopNavLinks: React.FC = () => {

@@ -3,65 +3,53 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { pb } from '@/lib/pocketbase_connect';
 
 interface SubscriptionContextType {
-  [key: string]: Date | undefined;
+  lastUpdate: Date | undefined;
 }
 
-const SubscriptionContext = createContext<SubscriptionContextType>({});
-
-export const COLLECTIONS = ['station_a20', 'station_a25', 'station_a26', 'station_s02', 'station_nvh', 'station_r23'];
-
-type FilterType = 'all' | 'failed' | 'non-failed';
+const SubscriptionContext = createContext<SubscriptionContextType>({ lastUpdate: undefined });
 
 interface SubscriptionProviderProps {
   children: React.ReactNode;
-  filter: FilterType;
+  debug?: boolean; // Add debug prop
 }
 
-export function SubscriptionProvider({ children, filter }: SubscriptionProviderProps) {
-  const [lastUpdates, setLastUpdates] = useState<SubscriptionContextType>({});
+export function SubscriptionProvider({ children, debug = false }: SubscriptionProviderProps) {
+  const [lastUpdate, setLastUpdate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
-    const subscriptions = COLLECTIONS.map(collection =>
-      pb.collection(collection).subscribe('*', (e) => {
-        const shouldUpdate =
-          (filter === 'all') ||
-          (filter === 'failed' && e.record.test_fail) ||
-          (filter === 'non-failed' && !e.record.test_fail);
+    const subscribeToUpdates = async () => {
+      try {
+        if (debug) console.log("Context: Subscribing to 'station_updates'");
+        await pb.collection('station_updates').subscribe('*', (e) => {
+          if (debug) console.log("Context: New update received", e);
+          setLastUpdate(new Date());
+        });
+      } catch (error) {
+        if (debug) console.error("Context: Failed to subscribe to 'station_updates':", error);
+      }
+    };
 
-        if (shouldUpdate) {
-          setLastUpdates(prev => ({
-            ...prev,
-            [collection]: new Date()
-          }));
-        }
-      }).catch(error => {
-        console.error(`Context: Failed to subscribe to ${collection}:`, error);
-      })
-    );
+    subscribeToUpdates();
 
     return () => {
-      subscriptions.forEach((subscription, index) => {
-        pb.collection(COLLECTIONS[index]).unsubscribe('*').catch(error => {
-          console.error(`Context: Failed to unsubscribe from ${COLLECTIONS[index]}:`, error);
-        });
+      pb.collection('station_updates').unsubscribe('*').catch(error => {
+        if (debug) console.error("Context: Failed to unsubscribe from 'station_updates':", error);
       });
+      if (debug) console.log("Context: Unsubscribed from 'station_updates'");
     };
-  }, [filter]);
+  }, [debug]);
 
   return (
-    <SubscriptionContext.Provider value={lastUpdates}>
+    <SubscriptionContext.Provider value={{ lastUpdate }}>
       {children}
     </SubscriptionContext.Provider>
   );
 }
 
-export function useSubscription(collectionName?: string) {
+export function useSubscription() {
   const context = useContext(SubscriptionContext);
   if (context === undefined) {
     throw new Error('useSubscription must be used within a SubscriptionProvider');
   }
-  if (collectionName) {
-    return context[collectionName];
-  }
-  return context;
+  return context.lastUpdate;
 }

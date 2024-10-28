@@ -1,6 +1,6 @@
 import { MainNavbar } from '@/components/layout/MainNavbar';
 import { SubscriptionProvider } from '@/context/SubscriptionContext';
-import "./globals.css";
+import "@/app/globals.css";
 
 import type { Metadata } from "next";
 import localFont from "next/font/local";
@@ -31,7 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SubscriptionProvider filter="failed">
+        <SubscriptionProvider debug={true}>
           <MainNavbar />
           {children}
         </SubscriptionProvider>

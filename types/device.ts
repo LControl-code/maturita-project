@@ -29,7 +29,7 @@ export interface trackTest {
 
 export interface trackStation {
   name: string;
-  status: 'passed' | 'failed';
+  status: 'passed' | 'failed' | 'pending';
   tests: Test[];
 }
 

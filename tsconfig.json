@@ -33,7 +33,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-  ],
+, "pb_hooks/utils.js"  ],
   "exclude": [
     "node_modules"
   ]

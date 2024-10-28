@@ -1,5 +1,6 @@
 import { FailsData, TestRecord } from "@/types/api";
 import { trackDevice, trackStation, trackTest } from '@/types/device';
+import { ErrorData } from "@/types/errors"
 
 import PocketBase from "pocketbase";
 
@@ -7,10 +8,6 @@ import PocketBase from "pocketbase";
 export const pb = new PocketBase("http://127.0.0.1:8090");
 
 pb.autoCancellation(false);
-
-pb.authStore.onChange(() => {
-  console.log("Auth state changed");
-});
 
 const collections = ['station_a20', 'station_a25', 'station_a26', 'station_s02', 'station_nvh', 'station_r23'];
 
@@ -279,7 +276,13 @@ export async function getDeviceData(deviceCode: string): Promise<trackDevice> {
     });
 
     if (records.length === 0) {
-      deviceDataByStation[collection] = null;
+      // Add a station with pending status if no record is found
+      const pendingStation: trackStation = {
+        name: collection.split('_')[1].toUpperCase(),
+        status: 'pending',
+        tests: []
+      };
+      stations.push(pendingStation);
       continue;
     }
 
@@ -342,4 +345,31 @@ export async function getDeviceData(deviceCode: string): Promise<trackDevice> {
   };
 
   return deviceData;
+}
+
+
+export async function getLiveErrorsData(): Promise<ErrorData[]> {
+  // Calculate the timestamp for one hour ago
+  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString().replace('T', ' ').split('.')[0];
+
+  try {
+    // Fetch data from the live_errors collection
+    const records = await pb.collection('live_errors').getFullList({
+      filter: `created>='${fifteenMinutesAgo}' `,
+      fields: 'test_data',
+      sort: '-created',
+      // cache: "no-store"
+    });
+
+    // Extract just the test_data from each record
+    const errorData = records.map(record => {
+      console.log(record.test_data);
+      return record.test_data;
+    });
+
+    return errorData;
+  } catch (error) {
+    console.error('Failed to fetch live errors data:', error);
+    throw error;
+  }
 }

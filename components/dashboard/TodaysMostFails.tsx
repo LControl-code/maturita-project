@@ -23,7 +23,7 @@ interface TooltipProps {
 }
 
 const fetchTopFailsData = async (): Promise<FailsData> => {
-  const response = await fetch('/api/data/top-fails', {
+  const response = await fetch('/api/data/tests/top', {
     // cache: 'no-store'
   });
   if (!response.ok) {
