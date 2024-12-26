@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import UplotReact from 'uplot-react';
 import 'uplot/dist/uPlot.min.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, AlertCircle } from "lucide-react";
-import { format, startOfWeek, endOfWeek, subWeeks } from "date-fns";
+import { format, startOfWeek, endOfWeek, subWeeks, addDays, subDays, subMonths, subYears } from "date-fns";
 import { pb } from "@/lib/pocketbase_connect";
 import { DateRange } from "react-day-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,6 +19,16 @@ type Station = keyof typeof STATIONS;
 interface DataPoint {
   time: string;
   [key: string]: any;
+}
+
+// Update interfaces for station limits
+interface TestLimit {
+  motor_type: string;
+  [limitName: string]: number | string;
+}
+
+interface StationLimits {
+  [station: string]: TestLimit[];
 }
 
 // Constants
@@ -53,34 +63,20 @@ const getAvailableTests = async (station: Station): Promise<string[]> => {
   }
 };
 
-const generateData = async (
+const generateAllData = async (
   station: Station,
-  test: string,
   startDate: Date,
   endDate: Date
-): Promise<[number[], number[]]> => {
+): Promise<DataPoint[]> => {
   try {
     const records = await pb.collection(station).getFullList<DataPoint>({
       filter: `time>="${startDate.toISOString().split('T')[0]} 00:00:00" && time<="${endDate.toISOString().split('T')[0]} 23:59:59"`,
-      fields: `time,${test}`,
     });
 
-    if (!records.length) {
-      return [[], []];
-    }
-
-    const timestamps: number[] = [];
-    const values: number[] = [];
-
-    records.forEach(record => {
-      timestamps.push(new Date(record.time).getTime() / 1000);
-      values.push(record[test]);
-    });
-
-    return [timestamps, values];
+    return records;
   } catch (error) {
     console.error('Error generating data:', error);
-    return [[], []];
+    return [];
   }
 };
 
@@ -92,53 +88,125 @@ export function TestingUplot() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [chartWidth, setChartWidth] = useState(800);
+  const [isTestsLoading, setIsTestsLoading] = useState(true); // New state for tests loading
 
-  const upperLimit = 8; // Replace with your actual upper limit value
-  const lowerLimit = 2;
+  // Cache for storing fetched data
+  const dataCache = useRef<{ [station: string]: { [range: string]: DataPoint[] } }>({});
 
+  // Adjust state for station limits
+  const [stationLimits, setStationLimits] = useState<StationLimits>({});
+
+  // Replace hard-coded limits with dynamic state
+  const [upperLimit, setUpperLimit] = useState<number>(8); // Default value
+  const [lowerLimit, setLowerLimit] = useState<number>(2); // Default value
+
+  // Update dateRange initial state to not go beyond 3 months ago
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     const currentDate = new Date();
+    const maxDate = currentDate;
+    const minDate = subMonths(currentDate, 3);
     const lastWeekStart = startOfWeek(subWeeks(currentDate, 1));
-    const lastWeekEnd = endOfWeek(subWeeks(currentDate, 1));
+    const adjustedStart = lastWeekStart < minDate ? minDate : lastWeekStart;
+    const lastWeekEnd = endOfWeek(lastWeekStart);
+    const adjustedEnd = lastWeekEnd > maxDate ? maxDate : lastWeekEnd;
     return {
-      from: lastWeekStart,
-      to: lastWeekEnd,
+      from: adjustedStart,
+      to: adjustedEnd,
     };
   });
 
-  // Fetch available tests when station changes
+  // Update presetOptions to ensure date ranges are within the last 3 months
+  const presetOptions = [
+    { label: 'Today', range: { from: new Date(), to: new Date() } },
+    { label: 'Yesterday', range: { from: subDays(new Date(), 1), to: subDays(new Date(), 1) } },
+    { label: 'Last 7 Days', range: { from: subDays(new Date(), 7), to: new Date() } },
+    { label: 'Last 30 Days', range: { from: subDays(new Date(), 30), to: new Date() } },
+    {
+      label: 'Last 3 Months',
+      range: { from: subMonths(new Date(), 3), to: new Date() }
+    },
+    // Remove or adjust presets that go beyond 3 months
+  ];
+
+  useLayoutEffect(() => {
+    const updateWidth = () => {
+      if (chartContainerRef.current) {
+        setChartWidth(chartContainerRef.current.offsetWidth - 50);
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
+  // Combine fetching tests and initial data when station changes
   useEffect(() => {
-    const fetchTests = async () => {
-      setIsLoading(true);
+    const fetchTestsAndData = async () => {
+      setIsTestsLoading(true);
       setError(null);
       try {
         const tests = await getAvailableTests(selectedStation);
         setAvailableTests(tests);
-        if (tests.length > 0 && !tests.includes(selectedTest)) {
-          setSelectedTest(tests[0]);
+        if (tests.length > 0) {
+          const initialTest = tests[0];
+          setSelectedTest(initialTest);
+          // Fetch all data for the station within the date range
+          const rangeKey = `${dateRange.from?.toISOString()}_${dateRange.to?.toISOString()}`;
+          if (dataCache.current[selectedStation]?.[rangeKey]) {
+            setData(extractTestData(dataCache.current[selectedStation][rangeKey], initialTest));
+            setIndices(dataCache.current[selectedStation][rangeKey].map((_, idx) => idx));
+          } else {
+            const allData = await generateAllData(selectedStation, dateRange.from, dateRange.to);
+            if (!dataCache.current[selectedStation]) {
+              dataCache.current[selectedStation] = {};
+            }
+            dataCache.current[selectedStation][rangeKey] = allData;
+            setData(extractTestData(allData, initialTest));
+            setIndices(allData.map((_, idx) => idx));
+            if (allData.length === 0) {
+              setError('No data available for the selected parameters');
+            }
+          }
+        } else {
+          setSelectedTest('');
+          setData([[], []]);
         }
       } catch (error) {
-        setError('Failed to fetch available tests');
+        setError('Failed to fetch tests or data');
       } finally {
+        setIsTestsLoading(false);
         setIsLoading(false);
       }
     };
 
-    fetchTests();
+    fetchTestsAndData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStation]);
 
-  // Fetch data when parameters change
+  // Separate useEffect for fetching data when dateRange changes
   useEffect(() => {
     const fetchData = async () => {
-      if (!selectedTest || !dateRange?.from || !dateRange?.to) return;
+      if (!dateRange?.from || !dateRange?.to) return;
 
       setIsLoading(true);
       setError(null);
       try {
-        const chartData = await generateData(selectedStation, selectedTest, dateRange.from, dateRange.to);
-        setData(chartData);
-        if (chartData[0].length === 0) {
-          setError('No data available for the selected parameters');
+        const rangeKey = `${dateRange.from?.toISOString()}_${dateRange.to?.toISOString()}`;
+        if (dataCache.current[selectedStation]?.[rangeKey]) {
+          setData(extractTestData(dataCache.current[selectedStation][rangeKey], selectedTest));
+          setIndices(dataCache.current[selectedStation][rangeKey].map((_, idx) => idx));
+        } else {
+          const allData = await generateAllData(selectedStation, dateRange.from, dateRange.to);
+          if (!dataCache.current[selectedStation]) {
+            dataCache.current[selectedStation] = {};
+          }
+          dataCache.current[selectedStation][rangeKey] = allData;
+          setData(extractTestData(allData, selectedTest));
+          setIndices(allData.map((_, idx) => idx));
+          if (allData.length === 0) {
+            setError('No data available for the selected parameters');
+          }
         }
       } catch (error) {
         setError('Failed to fetch data');
@@ -147,13 +215,92 @@ export function TestingUplot() {
       }
     };
 
-    fetchData();
-  }, [selectedStation, selectedTest, dateRange]);
+    // Avoid fetching data again if it's already fetched during station change
+    if (!isTestsLoading) {
+      fetchData();
+    }
+  }, [dateRange]);
+
+  // Add a state for indices
+  const [indices, setIndices] = useState<number[]>([]);
+
+  // Function to extract test data from all data
+  const extractTestData = (allData: DataPoint[], test: string): [number[], number[]] => {
+    const timestamps: number[] = [];
+    const values: number[] = [];
+
+    allData.forEach(record => {
+      timestamps.push(new Date(record.time).getTime() / 1000);
+      values.push(record[test]);
+    });
+
+    return [timestamps, values];
+  };
+
+  // Update fetchStationLimits to handle API array structure
+  const fetchStationLimits = async () => {
+    try {
+      const response = await fetch('/api/data/stations');
+      const data: any[] = await response.json();
+      const limitsMap: StationLimits = {};
+
+      data.forEach(stationEntry => {
+        Object.entries(stationEntry).forEach(([station, limitsArray]) => {
+          if (!limitsMap[station]) {
+            limitsMap[station] = [];
+          }
+          limitsMap[station].push(...limitsArray);
+        });
+      });
+
+      console.log('Fetched station limits:', limitsMap);
+      setStationLimits(limitsMap);
+    } catch (error) {
+      console.error('Error fetching station limits:', error);
+      // Optionally handle error state
+    }
+  };
+
+  // Fetch station limits on component mount
+  useEffect(() => {
+    fetchStationLimits();
+  }, []);
+
+  // Update limits when selectedTest or stationLimits change
+  useEffect(() => {
+    if (selectedTest && stationLimits[selectedStation]) {
+      const stationTests = stationLimits[selectedStation];
+      for (const testLimit of stationTests) {
+        const upperKey = `${selectedTest}_MAX`;
+        const lowerKey = `${selectedTest}_MIN`;
+        if (upperKey in testLimit && lowerKey in testLimit) {
+          const upper = testLimit[upperKey];
+          const lower = testLimit[lowerKey];
+          if (typeof upper === 'number' && typeof lower === 'number') {
+            setUpperLimit(upper);
+            setLowerLimit(lower);
+            break;
+          }
+        }
+      }
+    }
+  }, [selectedTest, stationLimits, selectedStation]);
+
+  // Update data when selected test changes
+  useEffect(() => {
+    if (selectedTest && dataCache.current[selectedStation]) {
+      const rangeKey = `${dateRange.from?.toISOString()}_${dateRange.to?.toISOString()}`;
+      const cachedData = dataCache.current[selectedStation][rangeKey];
+      if (cachedData) {
+        setData(extractTestData(cachedData, selectedTest));
+      }
+    }
+  }, [selectedTest]);
 
   const options = useMemo(() => ({
     title: `${STATIONS[selectedStation]} - ${selectedTest}`,
-    width: chartContainerRef.current ? chartContainerRef.current.offsetWidth - 50 : 800,
-    height: 400,
+    width: chartWidth,
+    height: 500,
     series: [
       {},
       {
@@ -163,7 +310,7 @@ export function TestingUplot() {
         stroke: "orange",
         width: 2,
         value: (self: any, rawValue: number) => rawValue ? `${rawValue}` : "--",
-        scale: selectedTest,
+        scale: 'y',
         points: { show: false } // Hide the dots
       },
       {
@@ -173,7 +320,7 @@ export function TestingUplot() {
         stroke: "red",
         width: 1,
         dash: [5, 5],
-        scale: selectedTest,
+        scale: 'y',
         points: { show: false } // Hide the dots
       },
       {
@@ -183,15 +330,15 @@ export function TestingUplot() {
         stroke: "blue",
         width: 1,
         dash: [5, 5],
-        scale: selectedTest,
+        scale: 'y',
         points: { show: false } // Hide the dots
       }
     ],
     scales: {
       x: {
-        time: true
+        time: false // Set time to false to use ordinal scale
       },
-      selectedTest: {
+      y: {
         auto: true,
         side: 3
       }
@@ -199,7 +346,12 @@ export function TestingUplot() {
     axes: [
       {
         scale: "x",
-        values: (self: any, ticks: number[]) => ticks.map(v => new Date(v * 1000).toLocaleDateString()),
+        // Update values to display dates from original timestamps
+        values: (self: any, ticks: number[]) => ticks.map(v => {
+          const index = Math.floor(v);
+          const timestamp = data[0][index];
+          return timestamp ? new Date(timestamp * 1000).toLocaleDateString() : '';
+        }),
         space: 80,
         grid: { show: true, stroke: "#e0e0e0", width: 1, dash: [5, 5] },
         ticks: { show: true, size: 10, stroke: "#000", width: 1 },
@@ -207,7 +359,7 @@ export function TestingUplot() {
         label: "Date"
       },
       {
-        scale: selectedTest,
+        scale: 'y',
         values: (self: any, ticks: number[]) => ticks.map(v => `${v} V`),
         grid: { show: true, stroke: "#e0e0e0", width: 1, dash: [5, 5] },
         ticks: { show: true, size: 10, stroke: "#000", width: 1 },
@@ -219,9 +371,24 @@ export function TestingUplot() {
       drag: {
         x: true,
         y: false
+      },
+      y: false,
+      x: false,
+    }
+  }), [selectedTest, chartWidth, data, upperLimit, lowerLimit]);
+
+  // Ensure manual date selections are within the allowed range
+  useEffect(() => {
+    if (dateRange?.from && dateRange.to) {
+      const minDate = subMonths(new Date(), 3);
+      const maxDate = new Date();
+      const adjustedFrom = dateRange.from < minDate ? minDate : dateRange.from;
+      const adjustedTo = dateRange.to > maxDate ? maxDate : dateRange.to;
+      if (adjustedFrom !== dateRange.from || adjustedTo !== dateRange.to) {
+        setDateRange({ from: adjustedFrom, to: adjustedTo });
       }
     }
-  }), [selectedStation, selectedTest, chartContainerRef.current]);
+  }, [dateRange]);
 
   return (
     <Card className="w-full rounded">
@@ -286,20 +453,44 @@ export function TestingUplot() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
+              <PopoverContent className="w-auto p-2" align="start">
+                <Select
+                  onValueChange={(value) => {
+                    const selectedPreset = presetOptions.find(option => option.label === value);
+                    if (selectedPreset) {
+                      setDateRange(selectedPreset.range);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Preset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presetOptions.map(option => (
+                      <SelectItem key={option.label} value={option.label}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="rounded-md border mt-2">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    disabled={{
+                      before: subMonths(new Date(), 3),
+                      after: new Date(),
+                    }}
+                  />
+                </div>
               </PopoverContent>
             </Popover>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="w-full my-4" ref={chartContainerRef}>
+      <CardContent className="w-full my-4 flex-grow" ref={chartContainerRef}>
         {isLoading ? (
           <div className="flex justify-center items-center h-96">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
@@ -313,10 +504,10 @@ export function TestingUplot() {
           <UplotReact
             options={options}
             data={[
-              data[0], // timestamps
-              data[1], // values
-              Array(data[0].length).fill(upperLimit), // upper limit line
-              Array(data[0].length).fill(lowerLimit)  // lower limit line
+              indices,                                  // Use indices for x-axis
+              data[1],                                  // Values
+              Array(indices.length).fill(upperLimit),   // Upper limit line
+              Array(indices.length).fill(lowerLimit)    // Lower limit line
             ]}
           />
         )}

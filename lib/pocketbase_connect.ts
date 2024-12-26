@@ -49,8 +49,8 @@ export async function getStationData() {
   return records.items;
 }
 
-export async function getLimitsForMotorType(motorType?: 'EFAD' | 'ERAD' | 'Short') {
-  const limitsByStation: { [key: string]: StationS02LimitsRecord[] } = {};
+export async function getLimitsForMotorType(motorType?: 'EFAD' | 'ERAD' | 'Short' | undefined) {
+  const limitsByStation: { [key: string]: any } = {};
 
   for (const collection of collections) {
     const limitsCollection = `${collection}_limits`;
@@ -60,7 +60,18 @@ export async function getLimitsForMotorType(motorType?: 'EFAD' | 'ERAD' | 'Short
       cache: 'no-store',
     });
 
-    limitsByStation[collection] = limits;
+    if (motorType) {
+      limitsByStation[collection] = limits;
+    } else {
+      // Group limits by motor_type
+      const groupedLimits = limits.reduce((acc: { [key: string]: StationS02LimitsRecord[] }, limit) => {
+        const mt = limit.motor_type || 'unknown';
+        if (!acc[mt]) acc[mt] = [];
+        acc[mt].push(limit);
+        return acc;
+      }, {} as { [key: string]: StationS02LimitsRecord[] });
+      limitsByStation[collection] = groupedLimits;
+    }
   }
 
   return limitsByStation;

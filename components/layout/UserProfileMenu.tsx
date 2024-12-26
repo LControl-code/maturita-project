@@ -14,8 +14,8 @@ import { UserData } from '@/types/layout';
 
 export const UserProfileMenu: React.FC = () => {
   const userData: UserData = {
-    name: "John Doe",
-    email: "john.doe@example.com",
+    name: "Adam Stratilík",
+    email: "adam.stratilik@student.ssnd.sk",
     avatarSrc: "/placeholder-avatar.jpg",
   };
 

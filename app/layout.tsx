@@ -17,8 +17,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Delta Info Dashboard",
-  description: "Data analysis",
+  title: "Industrial Test Data Analyser",
+  description: "Test Data analysis",
 };
 
 export default function RootLayout({
