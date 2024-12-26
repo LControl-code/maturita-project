@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, type JSX } from "react";
 import { CartesianGrid, Line, XAxis, YAxis, Brush, ComposedChart, ResponsiveContainer, ReferenceArea } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";

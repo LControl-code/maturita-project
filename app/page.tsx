@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import React from 'react';
 import DashboardOverview from '@/components/dashboard/DashboardOverview';
 import ProductionStatus from '@/components/dashboard/ProductionStatus';

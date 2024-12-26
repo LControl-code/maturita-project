@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, useMemo } from "react"
+import React, { useState, useEffect, useCallback, useMemo, type JSX } from "react";
 import { CartesianGrid, Line, XAxis, YAxis, Brush, ComposedChart, ResponsiveContainer, ReferenceArea } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"

@@ -26,14 +26,16 @@
         "./*"
       ]
     },
-    "target": "ES2017"
+    "target": "ES2017",
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
-, "pb_hooks/utils.js"  ],
+    ".next/types/**/*.ts",
+    "pb_hooks/utils.js"
+  ],
   "exclude": [
     "node_modules"
   ]
