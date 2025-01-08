@@ -1,5 +1,4 @@
 from pocketbase import PocketBase
-
 from pocketbase.client import FileUpload
 
 from datetime import datetime, timedelta
@@ -8,8 +7,17 @@ import string
 import time
 import sys
 import select
+import msvcrt
 
-pb = PocketBase('http://127.0.0.1:8090', "adam.stratilik@student.ssnd.sk", "hbhn25ws*1")
+# Initialize the PocketBase client
+pb = PocketBase('http://127.0.0.1:8090')
+
+# Authenticate as admin
+try:
+    admin_data = pb.admins.auth_with_password("adam.stratilik@student.ssnd.sk", "hbhn25ws*1")
+except Exception as e:
+    print(f"Admin authentication failed: {e}")
+    sys.exit(1)
 
 # Define the limits for each station and motor type
 station_limits = {
@@ -291,131 +299,73 @@ station_limits = {
     },
   }
 }
+try:
+    while True:
+        # Iterate over each station
+        motor_type = random.choice(["EFAD", "ERAD", "Short"])
+        motor_type = "EFAD"
+        device_code = f"P{random.randint(10000000, 99999999)}#1TF{random.randint(10000000, 99999999)}#{''.join(random.choices(string.ascii_uppercase, k=6))}#"
+        i = 0  # Initialize the counter
+        for station in station_limits.keys():
+          test_fail = random.random() < 0.3 # 7% chance of test failure
+          # Generate random values within the provided limits
+          entry_data = {
+            "time": (datetime.now() + timedelta(minutes=i*2)).isoformat(),
+            "device_code": device_code,
+            "motor_type": motor_type,
+          }
 
-while True:
-    # Iterate over each station
-    motor_type = random.choice(["EFAD", "ERAD", "Short"])
-    motor_type = "EFAD"
-    device_code = f"P{random.randint(10000000, 99999999)}#1TF{random.randint(10000000, 99999999)}#{''.join(random.choices(string.ascii_uppercase, k=6))}#"
-    i = 0  # Initialize the counter
-    for station in station_limits.keys():
-      test_fail = random.random() < 0.3 # 7% chance of test failure
-      # Generate random values within the provided limits
-      entry_data = {
-        "time": (datetime.now() + timedelta(minutes=i*2)).isoformat(),
-        "device_code": device_code,
-        "motor_type": motor_type,
-      }
+          # Get the limits for the current station and motor type
+          limits = station_limits[station][motor_type]
 
-      # Get the limits for the current station and motor type
-      limits = station_limits[station][motor_type]
+          # Add random values for each field
+          if test_fail:
+            # Randomly select tests to fail
+            num_fail_tests = random.randint(1, len(limits) - 5)
 
-      # Add random values for each field
-      if test_fail:
-        # Randomly select tests to fail
-        num_fail_tests = random.randint(1, len(limits) - 5)
-        
-        fail_tests = random.sample(list(limits.keys()), num_fail_tests)
+            fail_tests = random.sample(list(limits.keys()), num_fail_tests)
 
-        for key, (high, low) in limits.items():
-          if key in fail_tests:
-            # Generate a value outside the limits
-            if random.choice([True, False]):
-              entry_data[key] = round(random.uniform(low - 1, low - 0.1), 3)  # Below the lower limit
-            else:
-              entry_data[key] = round(random.uniform(high + 0.1, high + 1), 3)  # Above the upper limit
+            for key, (high, low) in limits.items():
+              if key in fail_tests:
+                # Generate a value outside the limits
+                if random.choice([True, False]):
+                  entry_data[key] = round(random.uniform(low - 1, low - 0.1), 3)  # Below the lower limit
+                else:
+                  entry_data[key] = round(random.uniform(high + 0.1, high + 1), 3)  # Above the upper limit
+              else:
+                # Generate a value within the limits
+                entry_data[key] = round(random.uniform(low, high), 3)
           else:
-            # Generate a value within the limits
-            entry_data[key] = round(random.uniform(low, high), 3)
-      else:
-        for key, (high, low) in limits.items():
-          # Generate a value within the limits
-          entry_data[key] = round(random.uniform(low, high), 3)
+            for key, (high, low) in limits.items():
+              # Generate a value within the limits
+              entry_data[key] = round(random.uniform(low, high), 3)
 
-      # Set the test_fail field based on the generated values
-      entry_data["test_fail"] = "true" if test_fail else "false"
+          # Set the test_fail field based on the generated values
+          entry_data["test_fail"] = "true" if test_fail else "false"
 
-      # Create the new entry in PocketBase
-      try:
-        collection_name = f"station_{station.lower()}"
-        created_record = pb.create_record(collection_name, entry_data)
-      except Exception as e:
-        print(f"Error: {e}")
-        print(f"Entry data: {entry_data}")
-      else:
-        # Print the time, device code, and test fail to the console
-        print(f"time: {entry_data['time']}, device_code: {entry_data['device_code']}, test_fail: {entry_data['test_fail']}")
+          # Create the new entry in PocketBase
+          try:
+            collection_name = f"station_{station.lower()}"
+            created_record = pb.collection(collection_name).create(entry_data)
+          except Exception as e:
+            print(f"Error: {e}")
+            print(f"Entry data: {entry_data}")
+          else:
+            # Print the time, device code, and test fail to the console
+            print(f"time: {entry_data['time']}, device_code: {entry_data['device_code']}, test_fail: {entry_data['test_fail']}")
 
-      i += 1  # Increment the counter
+          i += 1  # Increment the counter
 
-    # Sleep for a random duration between 1.5 and 3 minutes
-    sleep_duration = round(random.uniform(90, 180), 2)
-    print(f"Sleeping for {sleep_duration} seconds (press Enter to skip)", end="\r")
+        # Sleep for a random duration between 1.5 and 3 minutes
+        sleep_duration = round(random.uniform(90, 180), 2)
+        print(f"Sleeping for {sleep_duration} seconds (press Enter to skip)", end="\r")
 
-    start_time = time.time()
-    while time.time() - start_time < sleep_duration:
-      if sys.stdin in select.select([sys.stdin], [], [], 1)[0]:
-        input()  # Clear the input buffer
-        break
-      time.sleep(1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# # Create limit records for each collection
-# for station, motor_types in station_limits.items():
-#     if station == "S02":
-#         continue
-
-#     collection_name = f"station_{station.lower()}_limits"
-
-#     for motor_type, tests in motor_types.items():
-#         entry_data = {"motor_type": motor_type}
-#         for test_name, (max_val, min_val) in tests.items():
-#             entry_data[f"{test_name}_MIN"] = min_val
-#             entry_data[f"{test_name}_MAX"] = max_val
-
-#         try:
-#             created_record = pb.create_record(collection_name, entry_data)
-#             print(f"Record for motor type '{motor_type}' in collection '{collection_name}' created successfully.")
-#         except Exception as e:
-#             print(f"Error creating record for motor type '{motor_type}' in collection '{collection_name}': {e}")
-
-
-# # Create collections for each station except S02
-# for station, motor_types in station_limits.items():
-#     if station not in ["A25"]:
-#         continue
-
-#     collection_name = f"station_{station.lower()}_limits"
-#     db_type = 'base'
-#     schema = []
-
-#     # Add fields for each test limit for EFAD motor type only
-#     for test_name in motor_types["EFAD"].keys():
-#         schema.append({
-#             'name': f'{test_name}_MIN', 
-#             'type': 'number', 
-#             'required': False
-#         })
-#         schema.append({
-#             'name': f'{test_name}_MAX', 
-#             'type': 'number', 
-#             'required': False
-#         })
-#     try:
-#         pb.create_collection(collection_name, db_type, schema, fields="")
-#         print(f"Collection '{collection_name}' created successfully.")
-#     except Exception as e:
-#         print(f"Error creating collection '{collection_name}': {e}")
-
+        start_time = time.time()
+        while time.time() - start_time < sleep_duration:
+          if msvcrt.kbhit():
+              msvcrt.getch()  # Clear the key press
+              break
+          time.sleep(1)
+except KeyboardInterrupt:
+    print("\nGracefully shutting down...")
+    sys.exit(0)  # Exit the program cleanly

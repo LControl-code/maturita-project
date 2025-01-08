@@ -72,3 +72,4 @@ Thumbs.db
 python_fake_data.py
 pb_data/data.db
 pb_data/logs.db
+/pocketbase.exe

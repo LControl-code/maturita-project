@@ -1,13 +1,6 @@
-/// <reference path="../pb_data/types.d.ts" />
-
-// pb_hooks/utils.js
 module.exports = {
-  debug: () => {
-    return false
-  },
-
   welcome: () => {
-    console.log(`\n
+    console.log(`
     ██████╗ ███████╗██╗  ████████╗ █████╗     ██████╗ ██████╗ 
     ██╔══██╗██╔════╝██║  ╚══██╔══╝██╔══██╗    ██╔══██╗██╔══██╗
     ██║  ██║█████╗  ██║     ██║   ███████║    ██║  ██║██████╔╝
@@ -17,190 +10,169 @@ module.exports = {
     `)
   },
 
-  handleStationUpdates: (collectionName, stationName, debug) => {
+  /**
+   * Fetch existing station_updates record by "station_id",
+   * or prepare a new one if none is found.
+   */
+  _getOrCreateStationUpdateRecord(txApp, collectionName) {
+    let record
     try {
-      let record;
+      record = txApp.findFirstRecordByData("station_updates", "station_id", collectionName)
+    } catch {
+      record = null
+    }
 
-      try {
-        // Try to find existing update record
-        record = $app.dao().findFirstRecordByData('station_updates', 'station_id', collectionName)
-      } catch (findError) {
-        // Record not found - will create new one
-        record = null
-      }
-
-      if (record) {
-        // Update existing record
-        record.set('update_time', new Date().toISOString())
-        $app.dao().saveRecord(record)
-        if (debug) console.log(`Updated record for collection ${stationName}(${collectionName})`)
-      } else {
-        // Create new record
-        const collection = $app.dao().findCollectionByNameOrId("station_updates")
-        const newRecord = new Record(collection, {
-          "station_id": collectionName,
-          "update_time": new Date().toISOString()
-        })
-        $app.dao().saveRecord(newRecord)
-        if (debug) console.log(`Created new record for collection ${stationName}(${collectionName})`)
-      }
-    } catch (err) {
-      console.error(`Failed to update / create record for ${stationName}(${collectionName}): `, err)
+    if (record) {
+      record.set("update_time", new Date().toISOString())
+      return record
+    } else {
+      const coll = txApp.findCollectionByNameOrId("station_updates")
+      return new Record(coll, {
+        station_id:  collectionName,
+        update_time: new Date().toISOString(),
+      })
     }
   },
 
-  OLDcopyToLiveErrors: (collectionName, stationName, model, debug) => {
-    try {
-      const collection = $app.dao().findCollectionByNameOrId("live_errors");
-      const test_device_code = model.get("device_code")
-      const test_motor_type = model.get("motor_type")
-      const test_time = model.get("time")
-      const test_device_id = model.get("id")
+  /**
+   * Called from inside the transaction to process test data vs. station limits.
+   * If errors exist, creates a new record in "live_errors".
+   */
+  _createLiveErrorsRecordIfNeeded(txApp, stationName, model, logger) {
+    // fetch station limits
+    const testMotorType = model.get("motor_type")
+    const limits = this.getLimitsForStation(stationName, testMotorType)
+    if (!limits) {
+      // no limits => skip
+      logger.warn("No station limits found, skipping live_errors creation")
+      return
+    }
 
-      // Create a deep copy of the model
-      const test_result_data = JSON.parse(JSON.stringify(model))
+    // Deep copy the model data
+    const testData = JSON.parse(JSON.stringify(model))
+    ;[
+      "collectionId","collectionName","created","device_code",
+      "test_fail","time","updated","motor_type","id"
+    ].forEach(k => delete testData[k])
 
-      // Delete unwanted properties
-      delete test_result_data.collectionId
-      delete test_result_data.collectionName
-      delete test_result_data.created
-      delete test_result_data.device_code
-      delete test_result_data.test_fail
-      delete test_result_data.time
-      delete test_result_data.updated
-      delete test_result_data.motor_type
-      delete test_result_data.id
+    // Check data vs. limits
+    const errors = this.processTestData(testData, limits)
 
-      const newRecord = new Record(collection, {
-        "time": test_time,
-        "station_name": stationName,
-        "motor_type": test_motor_type,
-        "device_code": test_device_code,
-        "test_data": test_result_data,
-        "device_id": test_device_id
-      });
-      $app.dao().saveRecord(newRecord);
-      if (debug) console.log(`Copied data to live_errors for collection ${stationName}(${collectionName})`);
-    } catch (err) {
-      console.error(`Failed to copy data to live_errors for ${stationName}(${collectionName}): `, err);
+    // Only if we have errors, create live_errors record
+    if (errors.length > 0) {
+      const coll = txApp.findCollectionByNameOrId("live_errors")
+      const newRecord = new Record(coll, {
+        time:          model.get("time"),
+        station_name:  stationName,
+        motor_type:    testMotorType,
+        device_code:   model.get("device_code"),
+        test_data: {
+          id:         model.get("id"),
+          station:    stationName,
+          errors:     errors,
+          deviceCode: model.get("device_code"),
+          timestamp:  model.get("time"),
+          deviceId:   model.get("id"),
+        },
+        device_id: model.get("id"),
+      })
+
+      txApp.save(newRecord)
+      logger.info("Created live_errors record", "errorsCount", errors.length)
     }
   },
 
+  /**
+   * The main function that unifies station updates and live_errors creation in ONE transaction.
+   */
+  handleUpdatesAndCopy(collectionName, stationName, model) {
+    // Create a single logger with consistent attributes for grouping
+    const logTx = $app.logger()
+        .withGroup("stationFlow")
+        .with("stationName", stationName, "collectionName", collectionName)
 
-  getLimitsForStation: (stationName, motorType, debug) => {
     try {
-      if (debug) console.log(`Got motor_type: ${motorType}`)
-      const collectionName = `station_${stationName.toLowerCase()}_limits`;
-      if (debug) console.log(`Looking for limits in collection: ${collectionName}`);
+      $app.runInTransaction((txApp) => {
+        logTx.debug("Starting transaction")
 
-      const limitsRecord = $app.dao().findFirstRecordByData(collectionName, 'motor_type', motorType);
-      if (debug) console.log(`Found limits record for motor type: ${motorType}`);
+        // 1) Update or create station_updates
+        const stationRec = this._getOrCreateStationUpdateRecord(txApp, collectionName)
+        txApp.save(stationRec)
+        logTx.debug("Station_updates record saved")
 
+        // 2) Copy test data to live_errors if needed
+        this._createLiveErrorsRecordIfNeeded(txApp, stationName, model, logTx)
+
+        logTx.debug("Transaction finished successfully")
+      })
+    } catch (err) {
+      // If anything inside runInTransaction throws,
+      // the entire transaction is rolled back automatically.
+      $app.logger().error(
+          "Failed handleUpdatesAndCopy",
+          "stationName", stationName,
+          "collectionName", collectionName,
+          "error", err
+      )
+    }
+  },
+
+  /**
+   * Retrieve the station_{name}_limits record by motorType.
+   * Returns null if not found.
+   */
+  getLimitsForStation(stationName, motorType) {
+    try {
+      const collName = `station_${stationName.toLowerCase()}_limits`
+      $app.logger().debug("Looking for station limits", "collName", collName, "motorType", motorType)
+
+      const limitsRecord = $app.findFirstRecordByData(collName, "motor_type", motorType)
       if (!limitsRecord) {
-        console.error(`No limits found for station ${stationName} and motor type ${motorType}`);
-        return null;
+        $app.logger().warn("No limits found", "stationName", stationName, "motorType", motorType)
+        return null
       }
-
-      if (debug) console.log(`Limits record: ${JSON.stringify(limitsRecord)}`);
-      return limitsRecord;
+      return limitsRecord
     } catch (err) {
-      console.error(`Failed to get limits for ${stationName}: `, err);
-      return null;
+      $app.logger().error(
+          "Failed to get station limits",
+          "stationName", stationName,
+          "error", err
+      )
+      return null
     }
   },
 
-  processTestData: (testData, limits) => {
-    const errors = [];
+  /**
+   * Compare numeric fields with {TESTNAME_MIN, TESTNAME_MAX} in the given limits record
+   * and collect any out-of-bounds test errors.
+   */
+  processTestData(testData, limits) {
+    const errors = []
+    for (let [key, val] of Object.entries(testData)) {
+      if (typeof val !== "number") continue
 
-    // Iterate through each test in the test data
-    Object.entries(testData).forEach(([key, value]) => {
-      // Skip if the value isn't a number or is a special field
-      if (typeof value !== 'number') return;
+      const minLimit = limits.get(`${key}_MIN`)
+      const maxLimit = limits.get(`${key}_MAX`)
 
-      const minLimit = limits.get(`${key}_MIN`);
-      const maxLimit = limits.get(`${key}_MAX`);
-
-      if (minLimit !== undefined && value < minLimit) {
+      if (minLimit !== undefined && val < minLimit) {
         errors.push({
           test: key,
-          value: Number(value.toFixed(3)),
+          value: Number(val.toFixed(3)),
           limit: minLimit,
-          type: 'below',
-          offset: Number((minLimit - value).toFixed(3))
-        });
+          type: "below",
+          offset: Number((minLimit - val).toFixed(3))
+        })
       }
-
-      if (maxLimit !== undefined && value > maxLimit) {
+      if (maxLimit !== undefined && val > maxLimit) {
         errors.push({
           test: key,
-          value: Number(value.toFixed(3)),
+          value: Number(val.toFixed(3)),
           limit: maxLimit,
-          type: 'above',
-          offset: Number((value - maxLimit).toFixed(3))
-        });
+          type: "above",
+          offset: Number((val - maxLimit).toFixed(3))
+        })
       }
-    });
-
-    return errors;
-  },
-
-  copyToLiveErrors: (collectionName, stationName, model, debug) => {
-    try {
-      const collection = $app.dao().findCollectionByNameOrId("live_errors");
-      const test_device_code = model.get("device_code");
-      const test_motor_type = model.get("motor_type");
-      const test_time = model.get("time");
-      const test_device_id = model.get("id");
-
-      // Get the limits for this station and motor type
-      const limits = module.exports.getLimitsForStation(stationName, test_motor_type, debug);
-      if (!limits) {
-        if (debug) console.log(`No limits found for ${stationName} - ${test_motor_type}, skipping processing`);
-        return;
-      }
-
-      // Create a deep copy of the model and clean it
-      const test_result_data = JSON.parse(JSON.stringify(model));
-
-      // Delete unwanted properties
-      delete test_result_data.collectionId;
-      delete test_result_data.collectionName;
-      delete test_result_data.created;
-      delete test_result_data.device_code;
-      delete test_result_data.test_fail;
-      delete test_result_data.time;
-      delete test_result_data.updated;
-      delete test_result_data.motor_type;
-      delete test_result_data.id;
-
-      // Process the cleaned test data against limits
-      const errors = module.exports.processTestData(test_result_data, limits);
-
-      // Only create record if there are errors
-      if (errors.length > 0) {
-        const newRecord = new Record(collection, {
-          "time": test_time,
-          "station_name": stationName,
-          "motor_type": test_motor_type,
-          "device_code": test_device_code,
-          "test_data": {
-            "id": test_device_id,
-            "station": stationName,
-            "errors": errors,
-            "deviceCode": test_device_code,
-            "timestamp": test_time,
-            "deviceId": test_device_id
-          },
-          "device_id": test_device_id
-        });
-
-        $app.dao().saveRecord(newRecord);
-        if (debug) console.log(`Created live_errors record with ${errors.length} errors for ${stationName}(${collectionName})`);
-      } else {
-        if (debug) console.log(`No errors found for ${stationName}(${collectionName}), skipping record creation`);
-      }
-    } catch (err) {
-      console.error(`Failed to process and copy data to live_errors for ${stationName}(${collectionName}): `, err);
     }
-  }
-};
+    return errors
+  },
+}

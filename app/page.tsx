@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import React from 'react';
-import DashboardOverview from '@/components/dashboard/DashboardOverview';
+import DashboardOverviewServerPage from '@/components/dashboard/server/DashboardOverviewServerPage';
 import ProductionStatus from '@/components/dashboard/ProductionStatus';
 import LiveErrorsServerPage from '@/components/dashboard/server/LiveErrorsServerPage';
 import TodaysMostFailsServerPage from '@/components/dashboard/server/TodaysMostFailsServerPage';
@@ -16,7 +16,7 @@ export default function DashboardPage() {
       <WelcomeMessage />
 
       <div className="grid md:grid-cols-2 gap-4 mb-6">
-        <DashboardOverview />
+        <DashboardOverviewServerPage />
         <ProductionStatus />
       </div>
 

@@ -167,6 +167,14 @@ export async function getTopFailsData() {
   return { 'Top Fails': topStations };
 }
 
+export async function getStatsRecord() {
+  // call the custom route
+  const responseData = await pb.send("/api/stats", { method: "GET" });
+  // returns whatever was in e.json(200, ...)
+  return responseData;
+}
+
+
 export async function getFailedTestsGraphData() {
   const recordsByStation: { [key: string]: StationS02Record[] } = {};
   const limitsByStation: { [key: string]: StationS02LimitsRecord[] } = {};
