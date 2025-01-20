@@ -1,60 +1,47 @@
-// We'll call this onRecordAfterCreateSuccess for station_s02.
-// If your "final" station is named differently, just change "station_s02" below.
-
+// Example hook for station_s02
 onRecordAfterCreateSuccess((e) => {
-    // We'll wrap everything in a try/catch so we can handle errors gracefully.
     try {
         // 1. Run a transaction to safely update the stats record
         $app.runInTransaction((txApp) => {
             // 2. Count distinct device_code in station_s02
-            //    (We assume station_s02 is your final station)
-            //
-            // Example raw SQL approach:
             const query = txApp.db()
-                .newQuery("SELECT COUNT(DISTINCT device_code) as cnt FROM station_s02")
-            const result = new DynamicModel({ cnt: 0 })
-            query.one(result) // throws if station_s02 doesn't exist or is empty
+                .newQuery("SELECT COUNT(DISTINCT device_code) as cnt FROM station_s02");
 
-            const totalTested = result.cnt
+            const result = new DynamicModel({ cnt: 0 });
+            query.one(result); // throws on DB error or missing table
 
-            // 3. Load your single stats record (by name or by ID)
-            let statsRecord
+            const totalTested = result.cnt;
+
+            // 3. Load or create your single stats record
+            let statsRecord;
             try {
-                statsRecord = txApp.findFirstRecordByData("stats", "name", "globalStats")
+                statsRecord = txApp.findFirstRecordByData("stats", "name", "globalStats");
             } catch {
-                // If you haven't created it yet, do so here
-                const statsColl = txApp.findCollectionByNameOrId("stats")
+                const statsColl = txApp.findCollectionByNameOrId("stats");
                 statsRecord = new Record(statsColl, {
-                    name: "globalStats",
-                    totalTested: 0
-                })
+                    name:        "globalStats",
+                    totalTested: 0,
+                });
             }
 
             // 4. Update the total tested count
-            statsRecord.set("totalTested", totalTested)
-            txApp.save(statsRecord)
+            statsRecord.set("totalTested", totalTested);
+            txApp.save(statsRecord);
 
             // Optional log
             $app.logger().info(
                 "Stats updated after new record in station_s02",
                 "totalTested", totalTested
-            )
-        })
+            );
+        });
     } catch (err) {
-        $app.logger().error("Failed to update stats", "error", err)
+        $app.logger().error("Failed to update stats", "error", err);
     }
 
-    // Don’t forget to call e.next() if you want subsequent hooks to continue
-    e.next()
-}, "station_s02") // <-- "station_s02" is your final station collection name
+    e.next();
+}, "station_s02");
 
-
-
-
-// Hardcoded daily target:
-
-
-// Register a custom GET route /api/stats
+// Register a custom route: GET /api/stats
 routerAdd("GET", "/api/stats", (e) => {
     const DAILY_TARGET = 220;
     const STATIONS = [
@@ -67,66 +54,62 @@ routerAdd("GET", "/api/stats", (e) => {
     ];
 
     try {
-        // 1) Attempt to load your "globalStats" record (optional)
+        // 1) Attempt to load "globalStats"
         let statsRecord;
         try {
             statsRecord = $app.findFirstRecordByData("stats", "name", "globalStats");
         } catch {
-            // Not found? We'll just set it to null or create one, your call
             statsRecord = null;
         }
 
-        // 2) Today’s production: Distinct device_code in station_s02 since midnight
+        // 2) Today’s production: distinct device_code in station_s02 since midnight
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
-        const todayProdModel = new DynamicModel({
-            totalToday: 0,
-        });
-
+        const todayProdModel = new DynamicModel({ totalToday: 0 });
         $app.db()
             .newQuery(`
-        WITH distinct_today AS (
-          SELECT DISTINCT device_code
-          FROM station_s02
-          WHERE time >= {:todayStart}
-        )
-        SELECT COUNT(*) as totalToday
-        FROM distinct_today
-      `)
+                WITH distinct_today AS (
+                    SELECT DISTINCT device_code
+                    FROM station_s02
+                    WHERE time >= {:todayStart}
+                    )
+                SELECT COUNT(*) as totalToday
+                FROM distinct_today
+            `)
             .bind({ todayStart: startOfDay.toISOString() })
-            .one(todayProdModel); // populates todayProdModel.totalToday
+            .one(todayProdModel);
 
         const totalToday = todayProdModel.totalToday;
-        const todaysProduction = (totalToday / DAILY_TARGET) * 100; // e.g. 45.8%
+        const todaysProduction = (totalToday / DAILY_TARGET) * 100;
 
-        // 3) Overall efficiency: set-based approach with UNION + INTERSECT
+        // 3) Overall efficiency with set-based approach
         const multiStationModel = new DynamicModel({
             totalTestedAllStations: 0,
             totalPassedAllStations: 0,
         });
 
-        // Build the UNION part for all tested
-        const unionPart = STATIONS.map(
-            (s, idx) => `SELECT device_code FROM ${s}${idx === 0 ? "" : "\n"}`
-        ).join("\nUNION\n");
+        // Build the UNION of all tested
+        const unionPart = STATIONS.map((s, i) => {
+            return `${i === 0 ? "" : "\n"}SELECT device_code FROM ${s}`;
+        }).join("\nUNION");
 
-        // Build the INTERSECT part for all pass
-        const intersectPart = STATIONS.map(
-            (s, idx) => `SELECT device_code FROM ${s} WHERE test_fail=false${idx === 0 ? "" : "\n"}`
-        ).join("\nINTERSECT\n");
+        // Build the INTERSECT of all passed (test_fail = false)
+        const intersectPart = STATIONS.map((s, i) => {
+            return `${i === 0 ? "" : "\n"}SELECT device_code FROM ${s} WHERE test_fail=false`;
+        }).join("\nINTERSECT");
 
         const unionIntersectQuery = `
-      WITH all_tested AS (
-        ${unionPart}
-      ),
-      all_pass AS (
-        ${intersectPart}
-      )
-      SELECT
-        (SELECT COUNT(*) FROM all_tested) as totalTestedAllStations,
-        (SELECT COUNT(*) FROM all_pass) as totalPassedAllStations
-    `;
+            WITH all_tested AS (
+                ${unionPart}
+            ),
+            all_pass AS (
+                ${intersectPart}
+            )
+            SELECT
+                (SELECT COUNT(*) FROM all_tested) as totalTestedAllStations,
+                (SELECT COUNT(*) FROM all_pass) as totalPassedAllStations
+        `;
 
         $app.db()
             .newQuery(unionIntersectQuery)
@@ -139,10 +122,7 @@ routerAdd("GET", "/api/stats", (e) => {
             : 0;
 
         // 4) Merge final result
-        // Convert the PB Record to a plain object
         const statsData = statsRecord ? statsRecord.publicExport() : {};
-
-        // Then build your final response
         const result = {
             ...statsData,
             todaysProduction,

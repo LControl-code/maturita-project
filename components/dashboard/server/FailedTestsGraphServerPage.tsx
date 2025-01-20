@@ -1,5 +1,5 @@
 import { getFailedTestsGraphData } from '@/lib/pocketbase_connect';
-import FailedTestsGraph from '@/components/dashboard/FailedTestsGraph';
+import FailedTestsGraphOld from '@/components/dashboard/FailedTestsGraphOld';
 import { FailsData } from '@/types/api';
 
 async function getFailedTestsGraph(): Promise<FailsData> {
@@ -12,5 +12,5 @@ async function getFailedTestsGraph(): Promise<FailsData> {
 export default async function FailedTestsGraphServerPage() {
   const initialData = await getFailedTestsGraph();
 
-  return <FailedTestsGraph initialData={initialData} />;
+  return <FailedTestsGraphOld initialData={initialData} />;
 }

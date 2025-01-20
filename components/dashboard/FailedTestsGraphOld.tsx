@@ -30,7 +30,7 @@ const fetchTopFailsData = async (): Promise<FailsData> => {
   return response.json();
 };
 
-const FailedTestsGraph: React.FC<FailedTestsGraphProps> = ({ initialData }) => {
+const FailedTestsGraphOld: React.FC<FailedTestsGraphProps> = ({ initialData }) => {
   const [data, setData] = useState<FailsData>(initialData);
   const [selectedStation, setSelectedStation] = useState<string>(() => Object.keys(initialData)[0]);
   const [selectedTest, setSelectedTest] = useState<string | null>(null);
@@ -306,4 +306,4 @@ const FailedTestsGraph: React.FC<FailedTestsGraphProps> = ({ initialData }) => {
   );
 };
 
-export default FailedTestsGraph;
+export default FailedTestsGraphOld;

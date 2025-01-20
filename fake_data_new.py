@@ -27,7 +27,44 @@ except Exception as e:
     print(f"Admin authentication failed: {e}")
     sys.exit(1)
 
-# Define the limits for each station and motor type
+# ------------------------------------------------------------------
+# 1) Helper functions to get or create lines, stations, device_types
+# ------------------------------------------------------------------
+
+def get_or_create_line(line_name: str):
+    """Finds (or creates) a line record by its name."""
+    try:
+        record = pb.collection("lines").get_first_list_item(f'name="{line_name}"')
+        return record
+    except:
+        # Create a new line if it doesn't exist
+        return pb.collection("lines").create({"name": line_name})
+
+def get_or_create_station(station_name: str, line_id: str):
+    """Finds (or creates) a station record by station name and line."""
+    # Filter by name + line
+    filter_str = f'name="{station_name}" && line="{line_id}"'
+    try:
+        record = pb.collection("stations").get_first_list_item(filter_str)
+        return record
+    except:
+        # Create new station
+        return pb.collection("stations").create({
+            "name": station_name,
+            "line": line_id
+        })
+
+def get_or_create_device_type(type_name: str):
+    """Finds (or creates) a device_type record by name."""
+    try:
+        record = pb.collection("device_types").get_first_list_item(f'name="{type_name}"')
+        return record
+    except:
+        return pb.collection("device_types").create({"name": type_name})
+
+# ------------------------------------------------------------------
+# 2) Station limits definition (same as your original dictionary)
+# ------------------------------------------------------------------
 station_limits = {
   "A20": {
     "EFAD": {
@@ -307,62 +344,124 @@ station_limits = {
     },
   }
 }
+
+# Two lines in your environment
+LINES = ["Line 1", "Line 2"]
+
+# ------------------------------------------------------------------
+# 3) Main loop: generate data, pick line & station, create test_data
+# ------------------------------------------------------------------
 try:
     while True:
-        # Iterate over each station
         motor_type = random.choice(["EFAD", "ERAD", "Short"])
-        motor_type = "EFAD"
-        device_code = f"P{random.randint(10000000, 99999999)}#1TF{random.randint(10000000, 99999999)}#{''.join(random.choices(string.ascii_uppercase, k=6))}#"
-        i = 0  # Initialize the counter
-        for station in station_limits.keys():
-          test_fail = random.random() < 0.3 # 7% chance of test failure
-          # Generate random values within the provided limits
-          entry_data = {
-            "time": (datetime.now(timezone.utc) + timedelta(minutes=i*2)).isoformat(),
-            "device_code": device_code,
-            "motor_type": motor_type,
-          }
 
-          # Get the limits for the current station and motor type
-          limits = station_limits[station][motor_type]
+        # Generate a random device code
+        device_code = (
+            f"P{random.randint(10000000, 99999999)}"
+            f"#1TF{random.randint(10000000, 99999999)}"
+            f"#{''.join(random.choices(string.ascii_uppercase, k=6))}#"
+        )
 
-          # Add random values for each field
-          if test_fail:
-            # Randomly select tests to fail
-            num_fail_tests = random.randint(1, len(limits) - 5)
+        i = 0
+        # For each station in your dictionary
+        for station_name in station_limits.keys():
+            # Also do it for both lines (Line 1 and Line 2)
+            for line_name in LINES:
+                # 1) Get or create the line record
+                line_record = get_or_create_line(line_name)
 
-            fail_tests = random.sample(list(limits.keys()), num_fail_tests)
+                # 2) Get or create the station record
+                station_record = get_or_create_station(station_name, line_record.id)
 
-            for key, (high, low) in limits.items():
-              if key in fail_tests:
-                # Generate a value outside the limits
-                if random.choice([True, False]):
-                  entry_data[key] = round(random.uniform(low - 1, low - 0.1), 3)  # Below the lower limit
+                # If the station doesn't have the chosen motor_type, skip
+                # (In your original code, some stations might not have "Short", etc.)
+                if motor_type not in station_limits[station_name]:
+                    continue
+
+                # 3) Get or create the device_type
+                device_type_record = get_or_create_device_type(motor_type)
+
+                # 4) Decide if this test fails
+                test_fail_bool = (random.random() < 0.3)  # 30% chance of failure
+
+                # 5) Prepare the record for test_data
+                entry_data = {
+                    "time": (datetime.now(timezone.utc) + timedelta(minutes=i * 2)).isoformat(),
+                    "device_code": device_code,
+                    "test_fail": test_fail_bool,
+                    "station": station_record.id,
+                    "device_type": device_type_record.id,
+                }
+
+                # We'll store actual measurement values in a JSON field "test_data"
+                # This matches our new schema's "test_data" (json).
+                measurements = {}
+
+                # 6) Generate random values for the station's motor_type limits
+                limits = station_limits[station_name][motor_type]
+                if test_fail_bool:
+                    # Randomly select tests to fail
+                    num_fail_tests = random.randint(1, max(1, len(limits) - 5))
+                    fail_tests = random.sample(list(limits.keys()), num_fail_tests)
+
+                    for key, (high, low) in limits.items():
+                        if key in fail_tests:
+                            # Out-of-bounds
+                            if random.choice([True, False]):
+                                measurements[key] = round(random.uniform(low - 1, low - 0.1), 3)
+                            else:
+                                measurements[key] = round(random.uniform(high + 0.1, high + 1), 3)
+                        else:
+                            # Within bounds
+                            measurements[key] = round(random.uniform(low, high), 3)
                 else:
-                  entry_data[key] = round(random.uniform(high + 0.1, high + 1), 3)  # Above the upper limit
-              else:
-                # Generate a value within the limits
-                entry_data[key] = round(random.uniform(low, high), 3)
-          else:
-            for key, (high, low) in limits.items():
-              # Generate a value within the limits
-              entry_data[key] = round(random.uniform(low, high), 3)
+                    # All within bounds
+                    for key, (high, low) in limits.items():
+                        measurements[key] = round(random.uniform(low, high), 3)
 
-          # Set the test_fail field based on the generated values
-          entry_data["test_fail"] = "true" if test_fail else "false"
+                # Put this dictionary into "test_data" field
+                entry_data["test_data"] = measurements
 
-          # Create the new entry in PocketBase
-          try:
-            collection_name = f"station_{station.lower()}"
-            created_record = pb.collection(collection_name).create(entry_data)
-          except Exception as e:
-            print(f"Error: {e}")
-            print(f"Entry data: {entry_data}")
-          else:
-            # Print the time, device code, and test fail to the console
-            print(f"time: {entry_data['time']}, device_code: {entry_data['device_code']}, test_fail: {entry_data['test_fail']}")
+                # 7) Create the new test_data record in PocketBase
+                try:
+                    created_test_data = pb.collection("test_data").create(entry_data)
+                    print(f"time: {entry_data['time']}, device_code: {entry_data['device_code']}, test_fail: {test_fail_bool}")
 
-          i += 1  # Increment the counter
+                    # 8) If test_fail is True, create corresponding "failures" records
+                    if test_fail_bool:
+                        # Identify which keys were actually out-of-bounds
+                        for param, value in measurements.items():
+                            (hi, lo) = limits[param]
+                            if not (lo <= value <= hi):
+                                # Compute offset
+                                offset = 0
+                                fail_type = ""
+                                if value < lo:
+                                    offset = lo - value
+                                    fail_type = "below"
+                                elif value > hi:
+                                    offset = value - hi
+                                    fail_type = "above"
+
+                                # Insert a record into the "failures" collection
+                                failure_data = {
+                                    "test_data": created_test_data.id,
+                                    "station": station_record.id,
+                                    "device_type": device_type_record.id,
+                                    "test": param,
+                                    "limit": hi if value > hi else lo,
+                                    "value": value,
+                                    "offset": round(offset, 3),
+                                    "type": fail_type,
+                                    "time": entry_data["time"],
+                                }
+                                pb.collection("failures").create(failure_data)
+
+                except Exception as e:
+                    print(f"Error creating test_data/failures: {e}")
+                    print(f"Entry data: {entry_data}")
+
+                i += 1
 
         # Sleep for a random duration between 1.5 and 3 minutes
         sleep_duration = round(random.uniform(90, 180), 2)
@@ -370,10 +469,11 @@ try:
 
         start_time = time.time()
         while time.time() - start_time < sleep_duration:
-          if msvcrt.kbhit():
-              msvcrt.getch()  # Clear the key press
-              break
-          time.sleep(1)
+            if msvcrt.kbhit():
+                msvcrt.getch()  # Clear the key press
+                break
+            time.sleep(1)
+
 except KeyboardInterrupt:
     print("\nGracefully shutting down...")
-    sys.exit(0)  # Exit the program cleanly
+    sys.exit(0)

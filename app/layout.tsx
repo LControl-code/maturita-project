@@ -1,9 +1,9 @@
 import { MainNavbar } from '@/components/layout/MainNavbar';
-import { SubscriptionProvider } from '@/context/SubscriptionContext';
 import "@/app/globals.css";
 
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import React from "react";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -28,13 +28,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <SubscriptionProvider debug={true}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           <MainNavbar />
           {children}
-        </SubscriptionProvider>
       </body>
     </html>
   );

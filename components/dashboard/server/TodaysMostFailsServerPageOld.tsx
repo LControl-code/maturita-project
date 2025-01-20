@@ -1,5 +1,5 @@
 import { getTopFailsData } from '@/lib/pocketbase_connect';
-import TodaysMostFails from '@/components/dashboard/TodaysMostFails';
+import TodaysMostFailsOld from '@/components/dashboard/TodaysMostFailsOld';
 import { FailsData } from '@/types';
 
 async function getTodaysMostFailsData(): Promise<FailsData> {
@@ -27,8 +27,8 @@ async function getTodaysMostFailsData(): Promise<FailsData> {
   };
 }
 
-export default async function TodaysMostFailsServerPage() {
+export default async function TodaysMostFailsServerPageOld() {
   const initialData = await getTodaysMostFailsData();
 
-  return <TodaysMostFails initialData={initialData} />;
+  return <TodaysMostFailsOld initialData={initialData} />;
 }

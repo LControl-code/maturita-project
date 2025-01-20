@@ -34,7 +34,7 @@ const fetchTopFailsData = async (): Promise<FailsData> => {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'];
 
-const TodaysMostFails: React.FC<TodaysMostFailsProps> = ({ initialData }) => {
+const TodaysMostFailsOld: React.FC<TodaysMostFailsProps> = ({ initialData }) => {
   const [dataType, setDataType] = useState('Top Fails');
   const [selectedStation, setSelectedStation] = useState('All');
   const [failsData, setFailsData] = useState<FailsData>(initialData);
@@ -247,4 +247,4 @@ const TodaysMostFails: React.FC<TodaysMostFailsProps> = ({ initialData }) => {
   );
 };
 
-export default TodaysMostFails;
+export default TodaysMostFailsOld;
