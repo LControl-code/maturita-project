@@ -1,4 +1,5 @@
 import { MainNavbar } from '@/components/layout/MainNavbar';
+import SSEClient from '@/components/SSEClient';
 import "@/app/globals.css";
 
 import type { Metadata } from "next";
@@ -29,6 +30,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          {/* SSE subscription that triggers router.refresh() on DB changes */}
+          <SSEClient />
           <MainNavbar />
           {children}
       </body>

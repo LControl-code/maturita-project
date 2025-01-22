@@ -5,7 +5,6 @@ export async function fetchFailedTestsData(): Promise<any> {
     const res = await fetch('http://127.0.0.1:8090/api/failedTestsGraphNew', {
         next: {
             tags: ['failed_tests_tag'],
-            revalidate: 300
         }
     })
     return res.json()

@@ -14,8 +14,8 @@ from pocketbase import PocketBase
 load_dotenv()
 
 POCKETBASE_URL = os.environ.get("POCKETBASE_URL")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL")
-ADMIN_PASS = os.environ.get("ADMIN_PASS")
+ADMIN_EMAIL = os.environ.get("PB_ADMIN_EMAIL")
+ADMIN_PASS = os.environ.get("PB_ADMIN_PASS")
 
 # Initialize the PocketBase client
 pb = PocketBase(POCKETBASE_URL)
@@ -382,7 +382,7 @@ try:
                 device_type_record = get_or_create_device_type(motor_type)
 
                 # 4) Decide if this test fails
-                test_fail_bool = (random.random() < 0.3)  # 30% chance of failure
+                test_fail_bool = (random.random() < 1)  # 30% chance of failure
 
                 # 5) Prepare the record for test_data
                 entry_data = {

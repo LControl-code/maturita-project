@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { AlertOctagon, Filter } from 'lucide-react'
-import { pb } from '@/lib/pocketbase_connect'
+// import { pb } from '@/lib/pocketbase_connect'
 import { ErrorData, LiveErrorRecord } from '@/types/errors'
 
 interface LiveErrorsProps {
@@ -35,23 +35,23 @@ const LiveErrors: React.FC<LiveErrorsProps> = ({ initialData }) => {
     [selectedStation, errors]
   )
 
-  useEffect(() => {
-    pb.collection('live_errors').subscribe('*', async (e) => {
-      try {
-        const record = e.record as LiveErrorRecord
-        const newError: ErrorData = record.test_data
-        if (newError.errors.length > 0) {
-          setErrors(prevErrors => [newError, ...prevErrors].slice(0, MAX_ERRORS))
-        }
-      } catch (error) {
-        console.error('Error processing new record:', error)
-      }
-    })
-
-    return () => {
-      pb.collection('live_errors').unsubscribe()
-    }
-  }, [])
+  // useEffect(() => {
+  //   pb.collection('live_errors').subscribe('*', async (e) => {
+  //     try {
+  //       const record = e.record as LiveErrorRecord
+  //       const newError: ErrorData = record.test_data
+  //       if (newError.errors.length > 0) {
+  //         setErrors(prevErrors => [newError, ...prevErrors].slice(0, MAX_ERRORS))
+  //       }
+  //     } catch (error) {
+  //       console.error('Error processing new record:', error)
+  //     }
+  //   })
+  //
+  //   return () => {
+  //     pb.collection('live_errors').unsubscribe()
+  //   }
+  // }, [])
 
   const formatStationName = useCallback((station: string) => {
     return station.toUpperCase()

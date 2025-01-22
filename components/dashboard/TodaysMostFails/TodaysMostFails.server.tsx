@@ -6,7 +6,7 @@ export async function fetchTodaysMostFailsData(): Promise<FailsData> {
     const res = await fetch('http://127.0.0.1:8090/api/topFailsNew', {
         next: {
             tags: ['top_fails_tag'],
-            revalidate: 300
+
         }
     })
 
