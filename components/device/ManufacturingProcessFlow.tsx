@@ -7,6 +7,26 @@ import { RefreshCw } from 'lucide-react';
 import { useDevice } from '@/context/DeviceTrackingContext'
 
 
+/**
+ * A component that displays the manufacturing process flow for a device.
+ * 
+ * This component renders:
+ * - A header section with a title and refresh button
+ * - A grid of station cards representing the manufacturing process
+ * 
+ * @returns {JSX.Element|null} The rendered component or null if no device data is available
+ * 
+ * @example
+ * ```tsx
+ * <ManufacturingProcessFlow />
+ * ```
+ * 
+ * @requires useDevice - Custom hook that provides device data and refresh functionality
+ * @requires StationCard - Component for rendering individual station information
+ * @requires motion - Framer Motion component for animations
+ * @requires Button - UI component for the refresh button
+ * @requires RefreshCw - Icon component
+ */
 export default function ManufacturingProcessFlow() {
   const { refreshDevice, device } = useDevice()
 

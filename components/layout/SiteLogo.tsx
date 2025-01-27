@@ -1,6 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
 
+/**
+ * A React component that renders the site logo with a linked title.
+ * The logo consists of an SVG icon and text that is hidden on mobile devices.
+ * When clicked, it navigates to the home page.
+ * 
+ * @returns A Link component containing the logo SVG and site title
+ * @example
+ * ```tsx
+ * <SiteLogo />
+ * ```
+ */
 export const SiteLogo: React.FC = () => {
   return (
     <Link href="/" className="flex items-center gap-2">

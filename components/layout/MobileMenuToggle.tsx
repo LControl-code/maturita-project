@@ -17,6 +17,14 @@ const NavigationMenuLinkItem = ({ href, children }: { href: string; children: Re
   </Link>
 )
 
+/**
+ * MobileMenuToggle component renders a hamburger menu for mobile devices.
+ * The menu is hidden on medium and larger screens (md: breakpoint).
+ * Contains navigation links to Dashboard, Devices, and Stations pages.
+ * 
+ * @component
+ * @returns {JSX.Element} A navigation menu component with dropdown functionality
+ */
 export const MobileMenuToggle: React.FC = () => {
   return (
     <div className="md:hidden">

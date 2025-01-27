@@ -8,6 +8,18 @@ import { Activity } from 'lucide-react';
 
 const productionRate = 95.6
 
+/**
+ * A component that displays the current production status.
+ * 
+ * Renders a card with production-related metrics including:
+ * - Production rate (as percentage)
+ * - Number of devices produced vs. total target
+ * - Estimated time until completion
+ * 
+ * Features a fade-in animation from right to left on mount.
+ * 
+ * @returns A motion-animated card component containing production status information
+ */
 const ProductionStatus: React.FC = () => (
   <motion.div
     initial={{ opacity: 0, x: 50 }

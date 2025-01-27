@@ -12,6 +12,27 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserData } from '@/types/layout';
 
+/**
+ * A dropdown menu component for displaying user profile information and actions.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <UserProfileMenu />
+ * ```
+ * 
+ * Renders a button with user's avatar that opens a dropdown menu containing:
+ * - User's full name and email
+ * - Profile navigation options
+ * - Settings access
+ * - Help section link
+ * - Logout functionality
+ * 
+ * The component uses hardcoded user data and displays the user's initials as a fallback
+ * if the avatar image fails to load.
+ * 
+ * @returns A dropdown menu interface for user profile interactions
+ */
 export const UserProfileMenu: React.FC = () => {
   const userData: UserData = {
     name: "Adam Stratilík",

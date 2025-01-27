@@ -6,6 +6,14 @@ import { SearchBar } from '@/components/layout/SearchBar';
 import { QuickActionButton } from '@/components/layout/QuickActionButton';
 import { UserProfileMenu } from '@/components/layout/UserProfileMenu';
 
+/**
+ * Main navigation bar component for the application.
+ * Renders a header containing site logo, mobile menu toggle, desktop navigation links,
+ * search functionality, quick action button, and user profile menu.
+ * 
+ * @component
+ * @returns {JSX.Element} A header element containing navigation components
+ */
 export const MainNavbar: React.FC = () => {
   return (
     <header className="border-b">

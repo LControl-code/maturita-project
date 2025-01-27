@@ -11,6 +11,23 @@ const ERROR_TAGS = ['live_errors_tag', 'top_fails_tag', 'failed_tests_tag'];
 // Adjust debounce time as needed
 const DEBOUNCE_MS = 5000;
 
+/**
+ * A class that extends EventEmitter to handle database updates and revalidation.
+ * Implements a debounced event emission system for database changes.
+ * 
+ * @extends EventEmitter
+ * @class
+ * 
+ * @property {boolean} isWatching - Indicates if the watcher is currently active
+ * @property {NodeJS.Timeout | null} debounceTimer - Timer for debouncing update events
+ * 
+ * @emits {DBEventType.TEST_DATA_UPDATE} - Emitted when database changes are detected (after debounce)
+ * 
+ * @remarks
+ * - Uses PocketBase subscription to watch for database changes
+ * - Implements debouncing to prevent rapid successive updates
+ * - Automatically revalidates associated tags in Next.js after updates
+ */
 class DbUpdatesEmitter extends EventEmitter {
     private isWatching = false;
     private debounceTimer: NodeJS.Timeout | null = null;

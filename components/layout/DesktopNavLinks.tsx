@@ -18,6 +18,18 @@ const navItems: NavItem[] = [
   { label: 'Graphs', href: '/graph' },
 ]
 
+/**
+ * A desktop navigation component that renders a list of navigation links.
+ * The component is hidden on mobile devices and displays as a flex container on medium and larger screens.
+ * Each navigation item is rendered as a Link with a Button inside, showing active state based on current pathname.
+ * 
+ * @returns A navigation element containing styled navigation links
+ * 
+ * @example
+ * ```tsx
+ * <DesktopNavLinks />
+ * ```
+ */
 export const DesktopNavLinks: React.FC = () => {
   const pathname = usePathname()
 

@@ -5,6 +5,24 @@ import { motion } from 'framer-motion';
 import { Activity } from 'lucide-react';
 import { useDevice } from '@/context/DeviceTrackingContext'
 
+/**
+ * A component that displays an overview of test status statistics for a device.
+ * 
+ * This component shows:
+ * - Overall pass rate percentage
+ * - Number of passed/failed/total tests
+ * - Estimated completion time
+ * 
+ * The component uses the device context through useDevice hook and calculates
+ * statistics based on test results across all stations.
+ * 
+ * @returns {JSX.Element | null} Returns the status overview card or null if no device data is available
+ * 
+ * @example
+ * ```tsx
+ * <StatusOverview />
+ * ```
+ */
 export default function StatusOverview() {
   const { device } = useDevice()
 

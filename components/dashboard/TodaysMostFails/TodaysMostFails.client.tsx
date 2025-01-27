@@ -56,6 +56,32 @@ interface TodaysMostFailsProps {
     initialData: FailsData;
 }
 
+/**
+ * Client-side component for displaying the most frequent test failures using a radar chart.
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {FailsData} props.initialData - Initial data containing test failure information
+ * 
+ * Features:
+ * - Displays top 5 most failed tests in a radar chart visualization
+ * - Includes filtering by station and line number
+ * - Shows total number of failures as a badge
+ * - Animated transitions between data states
+ * - Responsive chart that adapts to container size
+ * - Custom tooltip showing detailed failure information
+ * 
+ * States:
+ * - failsData: Current failure data
+ * - selectedStation: Currently selected station filter
+ * - selectedLine: Currently selected line filter
+ * 
+ * Filters:
+ * - Station filter: Allows filtering by specific station or "All Stations"
+ * - Line filter: Allows filtering by specific line number or "All Lines"
+ * 
+ * @returns {JSX.Element} A card component containing filters and a radar chart visualization
+ */
 export default function TodaysMostFailsClient({ initialData }: TodaysMostFailsProps) {
     const [failsData, setFailsData] = useState<FailsData>(initialData);
 

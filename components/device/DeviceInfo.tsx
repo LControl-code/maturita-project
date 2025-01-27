@@ -6,6 +6,21 @@ import { useDevice } from '@/context/DeviceTrackingContext'
 import { motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
 
+/**
+ * Component that displays detailed information about a device.
+ * 
+ * This component uses the device context through the `useDevice` hook to access
+ * device information and displays it in a card format. The information includes:
+ * - Device code
+ * - Device type
+ * - Current station
+ * - Overall progress
+ * 
+ * The component features an animation on mount using Framer Motion,
+ * sliding in from the left with a fade effect.
+ * 
+ * @returns {JSX.Element | null} Returns the device information card or null if no device is available
+ */
 export default function DeviceInfo() {
   const { device } = useDevice()
 

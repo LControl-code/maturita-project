@@ -2,16 +2,19 @@
 
 import FailedTestsGraphClient from './FailedTestsGraph.client';
 
+/**
+ * Fetches data about failed tests from the API endpoint.
+ * 
+ * @async
+ * @function fetchFailedTestsData
+ * @returns {Promise<any>} A promise that resolves to the failed tests data
+ * @throws {Error} When the API request fails
+ */
 export async function fetchFailedTestsData(): Promise<any> {
-    // Fetch from OUR Next.js API route now, not directly from PocketBase
     const res = await fetch(
-        // You can do a relative path here:
-        // (In most cases, Next can resolve this as long as you're on the same domain.)
-        // Or you can do an absolute URL like: `${process.env.NEXT_PUBLIC_APP_URL}/api/failedTestsGraphNew`
         `${process.env.NEXT_PUBLIC_APP_URL}/api/data/dashboard/failedTestsGraph`,
         {
             next: {
-                // This tag matches the one you pass to `revalidateTag('failed_tests_tag')`
                 tags: ['failed_tests_tag'],
             }
         }
@@ -25,7 +28,14 @@ export async function fetchFailedTestsData(): Promise<any> {
 
 }
 
+/**
+ * A server component that fetches and renders a graph displaying failed tests data.
+ * This component fetches the initial data and passes it to the client-side component.
+ * 
+ * @returns {Promise<JSX.Element>} A Promise that resolves to the FailedTestsGraphClient component
+ * with the fetched initial data.
+ */
 export default async function FailedTestsGraph() {
     const data = await fetchFailedTestsData();
-    return <FailedTestsGraphClient initialData={data}/>;
+    return <FailedTestsGraphClient initialData={data} />;
 }

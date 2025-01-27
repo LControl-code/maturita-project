@@ -17,6 +17,33 @@ interface LiveErrorsProps {
   initialData: ErrorData[];
 }
 
+/**
+ * A client-side component that displays live errors in a filterable list view.
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {ErrorData[]} props.initialData - Initial array of error data to display
+ * 
+ * @remarks
+ * The component features:
+ * - Real-time error updates
+ * - Station filtering capabilities
+ * - Animated error list items
+ * - Detailed error information in a slide-out sheet
+ * - Responsive scroll area
+ * 
+ * @example
+ * ```tsx
+ * <LiveErrorsClient initialData={errorData} />
+ * ```
+ * 
+ * The error data is displayed in a card with:
+ * - Station filter dropdown
+ * - Timestamp and station name for each error
+ * - Error count badge
+ * - Detailed view with device information and test results
+ * - Link to device page
+ */
 const LiveErrorsClient: React.FC<LiveErrorsProps> = ({ initialData }) => {
   const [errors, setErrors] = useState<ErrorData[]>(initialData)
   const [selectedStation, setSelectedStation] = useState<string>("all")

@@ -1,7 +1,6 @@
 export const revalidate = 0 // Set to 0 for on-demand revalidation
 import SSEClient from '@/components/SSEClient';
 
-import DashboardOverviewServerPage from '@/components/dashboard/server/DashboardOverviewServerPage';
 import ProductionStatus from '@/components/dashboard/ProductionStatus';
 import Notifications from '@/components/dashboard/Notifications';
 import WelcomeMessage from '@/components/dashboard/WelcomeMessage';
@@ -9,6 +8,7 @@ import WelcomeMessage from '@/components/dashboard/WelcomeMessage';
 import FailedTestsGraph from '@/components/dashboard/FailedTestsGraph'
 import TodaysMostFails from '@/components/dashboard/TodaysMostFails'
 import LiveErrors from '@/components/dashboard/LiveErrors';
+import DashboardOverview from '@/components/dashboard/DashboardOverview';
 
 
 export default function DashboardPage() {
@@ -21,7 +21,7 @@ export default function DashboardPage() {
                 <WelcomeMessage />
 
                 <div className="grid md:grid-cols-2 gap-4 mb-6">
-                    <DashboardOverviewServerPage />
+                    <DashboardOverview />
                     <ProductionStatus />
                 </div>
 

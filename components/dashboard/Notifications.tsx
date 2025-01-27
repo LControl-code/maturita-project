@@ -9,6 +9,21 @@ import { AlertTriangle, Bell, Info } from "lucide-react";
 
 
 
+/**
+ * A React functional component that displays a notification card with animated entrance.
+ * The component shows different types of notifications (error, warning, info) in a scrollable list.
+ * Each notification includes an icon based on its type, a message, and a timestamp.
+ * 
+ * @component
+ * @uses motion.div - For entrance animation
+ * @uses Card - Container component
+ * @uses ScrollArea - For scrollable content
+ * @uses AlertTriangle - Icon for error notifications
+ * @uses Bell - Icon for warning notifications
+ * @uses Info - Icon for info notifications
+ * 
+ * @returns {JSX.Element} A notifications card with animated entrance and scrollable list of notifications
+ */
 const Notifications: React.FC = () => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}

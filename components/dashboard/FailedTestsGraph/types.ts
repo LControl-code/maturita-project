@@ -1,4 +1,3 @@
-// components/FailedTestsGraphOld/types.ts
 export type FailedTestData = {
     // Define your data structure
     station: string;

@@ -43,6 +43,31 @@ import { TestRecord, FailsData } from "./types";
 // Constants
 const ITEMS_PER_PAGE = 10;
 
+/**
+ * A component that displays a graph of failed tests organized by station and line.
+ * 
+ * @component
+ * @param {Object} props - The component props
+ * @param {FailsData} props.initialData - Initial data containing test failure information organized by station
+ * 
+ * @remarks
+ * The component features:
+ * - Station and line filtering
+ * - Interactive bar chart showing failed tests
+ * - Detailed view of failed test records in a paginated table
+ * - Color-coded bars based on failure frequency:
+ *   - Red (#7f1d1d): ≥50 fails
+ *   - Bright Red (#dc2626): 25-49 fails
+ *   - Orange (#f97316): 10-24 fails
+ *   - Yellow (#facc15): 1-9 fails
+ *   - Green (#22c55e): 0 fails
+ * 
+ * @returns A responsive card component containing:
+ * - Station and line selection dropdowns
+ * - Summary statistics (total failures and most critical test)
+ * - Interactive bar chart of failed tests
+ * - Detailed table view of selected test failures with pagination
+ */
 export default function FailedTestsGraph({ initialData }: { initialData: FailsData }) {
     // State management
     const [data, setData] = useState<FailsData>(initialData);
@@ -129,7 +154,7 @@ export default function FailedTestsGraph({ initialData }: { initialData: FailsDa
         if (fails >= 50) return "#7f1d1d";   // Danger
         if (fails >= 25) return "#dc2626";   // Abnormal
         if (fails >= 10) return "#f97316";   // Suspicious
-        if (fails >= 1)  return "#facc15";   // Normal-ish
+        if (fails >= 1) return "#facc15";   // Normal-ish
         return "#22c55e";                    // Perfect (0 fails)
     }
 
@@ -306,15 +331,15 @@ export default function FailedTestsGraph({ initialData }: { initialData: FailsDa
                                 <span>{totalFails || "No data"}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                <span className="font-medium flex items-center">
-                  <AlertTriangle className="h-4 w-4 text-destructive mr-2" />
-                  Most Critical:
-                </span>
+                                <span className="font-medium flex items-center">
+                                    <AlertTriangle className="h-4 w-4 text-destructive mr-2" />
+                                    Most Critical:
+                                </span>
                                 <span>
-                  {mostCriticalTest
-                      ? `${mostCriticalTest.name} (${mostCriticalTest.fails} fails)`
-                      : "No data"}
-                </span>
+                                    {mostCriticalTest
+                                        ? `${mostCriticalTest.name} (${mostCriticalTest.fails} fails)`
+                                        : "No data"}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -431,8 +456,8 @@ export default function FailedTestsGraph({ initialData }: { initialData: FailsDa
                                             Previous
                                         </Button>
                                         <span className="text-sm text-muted-foreground">
-                      Page {currentPage} of {totalPages}
-                    </span>
+                                            Page {currentPage} of {totalPages}
+                                        </span>
                                         <Button
                                             onClick={() =>
                                                 setCurrentPage((prev) => Math.min(prev + 1, totalPages))

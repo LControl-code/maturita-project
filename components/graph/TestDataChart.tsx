@@ -15,6 +15,34 @@ type TestDataPoint = {
   [key: string]: any
 }
 
+/**
+ * A component that displays test data in a chart format.
+ * 
+ * Features:
+ * - Displays test data over time in a line chart
+ * - Allows selection of different test metrics
+ * - Supports date range filtering
+ * - Interactive zoom/brush functionality
+ * - Custom tooltip and legend
+ * - Area selection capability
+ * 
+ * @returns {JSX.Element} A card containing the chart and controls
+ * 
+ * State:
+ * @property {TestDataPoint[]} chartData - Array of test data points
+ * @property {string[]} availableTests - List of available test metrics
+ * @property {string} selectedTest - Currently selected test metric
+ * @property {Object} dateRange - Selected date range with from and to dates
+ * @property {Object} selection - Current area selection coordinates
+ * @property {boolean} selecting - Whether area selection is in progress
+ * @property {Object} range - Zoom range coordinates
+ * 
+ * Components:
+ * - Uses ResponsiveContainer and ComposedChart from recharts
+ * - Includes DatePickerWithRange for date filtering
+ * - Select component for test metric selection
+ * - Custom ChartContainer for styling
+ */
 export function TestDataChart(): JSX.Element {
   const [chartData, setChartData] = useState<TestDataPoint[]>([])
   const [availableTests, setAvailableTests] = useState<string[]>([])

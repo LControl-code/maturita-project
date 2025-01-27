@@ -21,6 +21,22 @@ interface StationCardProps {
   index: number
 }
 
+/**
+ * A component that displays a card representing a testing station with its status and test results.
+ *
+ * @component
+ * @param {Object} props - The component props
+ * @param {Station} props.station - The station object containing name, status, and test results
+ * @param {boolean} props.isCurrentStation - Boolean indicating if this is the currently active station
+ * @param {number} props.index - Index used for animation delay when rendering multiple cards
+ *
+ * @returns A card component that displays:
+ * - Station name and status icon
+ * - Status badge showing test results
+ * - Dialog with detailed test results when clicked
+ * - Animated entrance using motion.div
+ * - Tabs showing failed and passed tests in a scrollable area
+ */
 const StationCard: React.FC<StationCardProps> = ({ station, isCurrentStation, index }) => {
   const [isOpen, setIsOpen] = useState(false)
 

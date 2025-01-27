@@ -2,6 +2,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
+/**
+ * A component that displays a welcome message with an animation effect.
+ * The message appears with a fade-in and slide-down animation using Framer Motion.
+ * 
+ * @returns A motion.h1 element containing the welcome message
+ * @component WelcomeMessage
+ */
 const WelcomeMessage: React.FC = () => {
   return (
     <motion.h1

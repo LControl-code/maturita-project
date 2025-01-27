@@ -2,6 +2,18 @@ import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Search } from 'lucide-react';
 
+/**
+ * A search bar component that displays a search input field with a search icon.
+ * The component uses a form element containing an Input component with a search icon positioned absolutely.
+ * 
+ * @component
+ * @returns A form element containing a search input field with a search icon
+ * 
+ * @example
+ * ```tsx
+ * <SearchBar />
+ * ```
+ */
 export const SearchBar: React.FC = () => {
   return (
     <form className="relative">

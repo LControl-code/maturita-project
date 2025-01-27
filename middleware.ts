@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+/**
+ * Middleware function that validates the request's referrer against the request URL.
+ * If validation fails, redirects to the root path.
+ * 
+ * @param request - The incoming Next.js request object
+ * @returns {NextResponse | undefined} Redirects to root path if validation fails, undefined otherwise
+ * @throws {Error} When referer header is missing or when origins don't match
+ * 
+ * Security middleware that:
+ * - Checks if referer header exists
+ * - Validates that request origin matches referer origin
+ * - Redirects to homepage if validation fails
+ */
 export function middleware(request: NextRequest) {
 
   try {
