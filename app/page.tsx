@@ -1,4 +1,6 @@
 export const revalidate = 0 // Set to 0 for on-demand revalidation
+import SSEClient from '@/components/SSEClient';
+
 import DashboardOverviewServerPage from '@/components/dashboard/server/DashboardOverviewServerPage';
 import ProductionStatus from '@/components/dashboard/ProductionStatus';
 import Notifications from '@/components/dashboard/Notifications';
@@ -12,21 +14,25 @@ import LiveErrors from '@/components/dashboard/LiveErrors';
 export default function DashboardPage() {
 
     return (
-        <div className="container mx-auto p-4 space-y-6">
-            <WelcomeMessage />
+        <>
+            {/* SSE subscription that triggers router.refresh() on DB changes */}
+            <SSEClient />
+            <div className="container mx-auto p-4 space-y-6">
+                <WelcomeMessage />
 
-            <div className="grid md:grid-cols-2 gap-4 mb-6">
-                <DashboardOverviewServerPage />
-                <ProductionStatus />
+                <div className="grid md:grid-cols-2 gap-4 mb-6">
+                    <DashboardOverviewServerPage />
+                    <ProductionStatus />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <LiveErrors />
+                    <TodaysMostFails />
+                    <Notifications />
+                </div>
+
+                <FailedTestsGraph />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <LiveErrors />
-                <TodaysMostFails />
-                <Notifications />
-            </div>
-
-            <FailedTestsGraph />
-        </div>
+        </>
     );
 }
