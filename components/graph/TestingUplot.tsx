@@ -490,7 +490,7 @@ export function TestingUplot() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="w-full my-4 flex-grow" ref={chartContainerRef}>
+      <CardContent className="w-full my-4 grow" ref={chartContainerRef}>
         {isLoading ? (
           <div className="flex justify-center items-center h-96">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />

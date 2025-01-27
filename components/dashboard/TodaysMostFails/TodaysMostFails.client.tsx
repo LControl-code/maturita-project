@@ -135,7 +135,7 @@ export default function TodaysMostFailsClient({ initialData }: TodaysMostFailsPr
 
         const { subject, value } = payload[0].payload;
         return (
-            <div className="p-2 bg-white border rounded shadow">
+            <div className="p-2 bg-white border rounded shadow-sm">
                 <p className="font-semibold">{subject}</p>
                 <p>Fails: {value}</p>
             </div>
@@ -149,7 +149,7 @@ export default function TodaysMostFailsClient({ initialData }: TodaysMostFailsPr
             transition={{ delay: 0.3 }}
             className="flex flex-col h-full"
         >
-            <Card className="flex-grow flex flex-col">
+            <Card className="grow flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center w-full">
                         <span>Today&apos;s Most Fails</span>
@@ -157,7 +157,7 @@ export default function TodaysMostFailsClient({ initialData }: TodaysMostFailsPr
                     </CardTitle>
                 </CardHeader>
 
-                <CardContent className="flex-grow flex flex-col gap-4">
+                <CardContent className="grow flex flex-col gap-4">
                     {/* -- FILTER: Station & Line -- */}
                     <div className="flex flex-row gap-4">
                         {/* Station Select */}
@@ -198,7 +198,7 @@ export default function TodaysMostFailsClient({ initialData }: TodaysMostFailsPr
                     </div>
 
                     {/* -- CHART AREA -- */}
-                    <div className="flex-grow relative">
+                    <div className="grow relative">
                         <AnimatePresence>
                             {radarData.length === 0 ? (
                                 <motion.div

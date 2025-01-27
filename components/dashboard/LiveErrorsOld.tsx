@@ -70,7 +70,7 @@ const LiveErrors: React.FC<LiveErrorsProps> = ({ initialData }) => {
       transition={{ delay: 0.4 }}
       className="flex flex-col"
     >
-      <Card className="flex-grow">
+      <Card className="grow">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-2xl font-bold">Live Errors</CardTitle>
           <div className="flex items-center space-x-2">
@@ -151,7 +151,7 @@ const LiveErrors: React.FC<LiveErrorsProps> = ({ initialData }) => {
                                   </div>
                                 </div>
                               </div>
-                              <ScrollArea className="flex-grow">
+                              <ScrollArea className="grow">
                                 <div className="space-y-4">
                                   {error.errors.map((detail, index) => (
                                     <div key={index} className="bg-gray-50 p-4 rounded-lg">

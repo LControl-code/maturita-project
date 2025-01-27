@@ -16,7 +16,7 @@ export default function DeviceInfo() {
       initial={{ opacity: 0, x: -50 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.2 }}
-      className="flex-grow"
+      className="grow"
     >
       <Card className="h-full">
         <CardHeader>

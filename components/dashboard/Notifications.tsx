@@ -16,7 +16,7 @@ const Notifications: React.FC = () => (
     transition={{ delay: 0.6 }}
     className="flex flex-col"
   >
-    <Card className="flex-grow">
+    <Card className="grow">
       <CardHeader>
         <CardTitle>Notifications</CardTitle>
       </CardHeader>

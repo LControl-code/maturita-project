@@ -112,7 +112,7 @@ function DeviceTrackingContent() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-            <div className="relative flex-grow">
+            <div className="relative grow">
               <Input
                 placeholder="Enter device code"
                 value={inputDeviceCode}
