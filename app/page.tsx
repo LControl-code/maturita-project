@@ -1,6 +1,6 @@
+export const revalidate = 0 // Set to 0 for on-demand revalidation
 import DashboardOverviewServerPage from '@/components/dashboard/server/DashboardOverviewServerPage';
 import ProductionStatus from '@/components/dashboard/ProductionStatus';
-import LiveErrorsServerPage from '@/components/dashboard/server/LiveErrorsServerPage';
 import Notifications from '@/components/dashboard/Notifications';
 import WelcomeMessage from '@/components/dashboard/WelcomeMessage';
 
