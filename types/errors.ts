@@ -6,13 +6,33 @@ export interface ErrorDetail {
   type: 'above' | 'below'
 }
 
+// export interface ErrorData {
+//   id: string
+//   station: string
+//   errors: ErrorDetail[]
+//   deviceCode: string
+//   timestamp: string
+//   deviceId: string
+// }
+
+export interface TestError {
+  limit: number
+  offset: number
+  test: string
+  type: 'below' | 'above'
+  value: number
+}
+
 export interface ErrorData {
-  id: string
-  station: string
-  errors: ErrorDetail[]
-  deviceCode: string
-  timestamp: string
-  deviceId: string
+  device_code: string
+  device_id: string
+  motor_type: string
+  station_line: string
+  station_name: string
+  test_data: {
+    errors: TestError[]
+  }
+  time: string
 }
 
 export interface ErrorDataDatabase {

@@ -27,34 +27,34 @@ const DashboardOverview: React.FC<{ initialData: StatsData }> = ({ initialData }
   const [stats, setStats] = useState<StatsData>(initialData);
 
 
-  useEffect(() => {
-    if (!stats.id) {
-      // If there's no valid record id, we can't subscribe. Possibly no data found.
-      return;
-    }
-
-    // Subscribe to real-time changes on this record
-    pb.collection("stats").subscribe(stats.id, (e) => {
-      // e.record => the updated record
-      if (e.action === "update") {
-        const updated = e.record;
-
-        // Update only the fields we care about in local state
-        setStats((prev) => ({
-          ...prev,
-          totalTested: updated.totalTested ?? prev.totalTested,
-          activeStations: updated.activeStations ?? prev.activeStations,
-          todaysProduction: updated.todaysProduction ?? prev.todaysProduction,
-          overallEfficiency: updated.overallEfficiency ?? prev.overallEfficiency,
-        }));
-      }
-    });
-
-    // Cleanup to avoid memory leaks if the component unmounts
-    return () => {
-      pb.collection("stats").unsubscribe(stats.id);
-    };
-  }, [stats.id]);
+  // useEffect(() => {
+  //   if (!stats.id) {
+  //     // If there's no valid record id, we can't subscribe. Possibly no data found.
+  //     return;
+  //   }
+  //
+  //   // Subscribe to real-time changes on this record
+  //   pb.collection("stats").subscribe(stats.id, (e) => {
+  //     // e.record => the updated record
+  //     if (e.action === "update") {
+  //       const updated = e.record;
+  //
+  //       // Update only the fields we care about in local state
+  //       setStats((prev) => ({
+  //         ...prev,
+  //         totalTested: updated.totalTested ?? prev.totalTested,
+  //         activeStations: updated.activeStations ?? prev.activeStations,
+  //         todaysProduction: updated.todaysProduction ?? prev.todaysProduction,
+  //         overallEfficiency: updated.overallEfficiency ?? prev.overallEfficiency,
+  //       }));
+  //     }
+  //   });
+  //
+  //   // Cleanup to avoid memory leaks if the component unmounts
+  //   return () => {
+  //     pb.collection("stats").unsubscribe(stats.id);
+  //   };
+  // }, [stats.id]);
 
   // If stats are not loaded (rare, since we had initialData), we can show a fallback
   // but realistically we always have something from server side

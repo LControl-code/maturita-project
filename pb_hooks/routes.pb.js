@@ -1,5 +1,7 @@
 // routes.pb.js
 
+const { time } = require("console");
+
 //---------------------------------------------------------------------
 // 2) A new route that returns the station collection names as JSON
 //---------------------------------------------------------------------
@@ -23,10 +25,10 @@ routerAdd("GET", "/api/topFailsNew", async (e) => {
         // --------------------------------------------------------------------
         const now = new Date();
         const startOfUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-        const endOfUTC   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
+        const endOfUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
 
         const startStr = startOfUTC.toISOString().replace("T", " ").split(".")[0];
-        const endStr   = endOfUTC.toISOString().replace("T", " ").split(".")[0];
+        const endStr = endOfUTC.toISOString().replace("T", " ").split(".")[0];
 
         // --------------------------------------------------------------------
         // 2) Fetch "failures" for today's UTC range
@@ -224,10 +226,10 @@ routerAdd("GET", "/api/failedTestsGraphNew", async (e) => {
         // --------------------------------------------------------------------
         const now = new Date();
         const startOfUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-        const endOfUTC   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
+        const endOfUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
 
         const startStr = startOfUTC.toISOString().replace("T", " ").split(".")[0];
-        const endStr   = endOfUTC.toISOString().replace("T", " ").split(".")[0];
+        const endStr = endOfUTC.toISOString().replace("T", " ").split(".")[0];
 
         // --------------------------------------------------------------------
         // 2) Fetch "failures" for today's UTC range
@@ -296,9 +298,9 @@ routerAdd("GET", "/api/failedTestsGraphNew", async (e) => {
 
             // e) measuredValue, limit, offset, difference
             const measuredValue = f.getFloat("value");
-            const limitValue    = f.getFloat("limit");
-            const offsetValue   = f.getFloat("offset");
-            const difference    = parseFloat((measuredValue - limitValue).toFixed(3));
+            const limitValue = f.getFloat("limit");
+            const offsetValue = f.getFloat("offset");
+            const difference = parseFloat((measuredValue - limitValue).toFixed(3));
 
             // f) "type" (e.g. "above" / "below")
             const typeValue = f.getString("type") || "unknown-type";
@@ -352,8 +354,87 @@ routerAdd("GET", "/api/failedTestsGraphNew", async (e) => {
     }
 });
 
+routerAdd("GET", "/api/liveErrorsNew", async (e) => {
+    try {
+        // Calculate today's UTC date range
+        const now = new Date();
+        const startOfUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        const endOfUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
 
+        const startStr = startOfUTC.toISOString().replace("T", " ").split(".")[0];
+        const endStr = endOfUTC.toISOString().replace("T", " ").split(".")[0];
 
+        // Fetch failures for today
+        const filterExpr = `
+            time >= {:start} &&
+            time <= {:end}
+        `;
+        const failures = await $app.findRecordsByFilter(
+            "failures",
+            filterExpr,
+            "-created",
+            1000,
+            0,
+            { start: startStr, end: endStr }
+        );
+
+        // Expand relations
+        await $app.expandRecords(failures, [
+            "station",
+            "test_data",
+            "device_type",
+            "station.line"
+        ]);
+
+        // Group by test_data ID
+        const groupedFailures = {};
+        for (const failure of failures) {
+            const testDataRec = failure.expandedOne("test_data");
+            const stationRec = failure.expandedOne("station");
+            const deviceTypeRec = failure.expandedOne("device_type");
+            const stationLineRec = stationRec.expandedOne("line");
+
+            if (!testDataRec || !stationRec) continue;
+
+            const testDataId = testDataRec.id;
+            if (!groupedFailures[testDataId]) {
+                groupedFailures[testDataId] = {
+                    station_line: stationLineRec?.get("name") || "Unknown",
+                    station_name: stationRec.get("name"),
+                    motor_type: deviceTypeRec?.get("name") || "Unknown",
+                    device_code: testDataRec.get("device_code"),
+                    device_id: testDataRec.id,
+                    test_data: {
+                        errors: [],
+                    },
+                    time: failure.getString("time")
+                };
+            }
+
+            // Add error to the errors array
+            groupedFailures[testDataId].test_data.errors.push({
+                test: failure.getString("test"),
+                value: failure.getFloat("value"),
+                type: failure.getString("type"),
+                limit: failure.getFloat("limit"),
+                offset: failure.getFloat("offset")
+            });
+        }
+
+        // Convert to array and sort by time descending
+        const result = Object.values(groupedFailures).sort(
+            (a, b) => new Date(b.time) - new Date(a.time)
+        );
+
+        return e.json(200, result);
+
+    } catch (err) {
+        return e.json(500, {
+            error: "Failed to fetch live errors",
+            message: err?.message || String(err)
+        });
+    }
+});
 
 // ---------------------------------------------------------------------
 // /api/topFails (GET)
@@ -375,7 +456,7 @@ routerAdd("GET", "/api/topFails", (e) => {
 
         // Convert to "YYYY-MM-DD HH:MM:SS" for PocketBase filters
         const startStr = startOfUTC.toISOString().replace("T", " ").split(".")[0];
-        const endStr   = endOfUTC.toISOString().replace("T", " ").split(".")[0];
+        const endStr = endOfUTC.toISOString().replace("T", " ").split(".")[0];
 
         // We'll store final data in an object keyed by collection name
         const recordsByStation = {};
@@ -405,7 +486,7 @@ routerAdd("GET", "/api/topFails", (e) => {
                 0,            // offset
                 {
                     "start": startStr,
-                    "end":   endStr,
+                    "end": endStr,
                 },
             );
 
@@ -504,10 +585,10 @@ routerAdd("GET", "/api/failedTestsGraph", (e) => {
         // --- NEW: Calculate "today" in UTC, from 00:00:00 to 23:59:59 ---
         const now = new Date();
         const startOfUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-        const endOfUTC   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
+        const endOfUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
 
         const startStr = startOfUTC.toISOString().replace("T", " ").split(".")[0];
-        const endStr   = endOfUTC.toISOString().replace("T", " ").split(".")[0];
+        const endStr = endOfUTC.toISOString().replace("T", " ").split(".")[0];
 
         // 1) Load station limits
         const limitsByStation = {};
@@ -534,7 +615,7 @@ routerAdd("GET", "/api/failedTestsGraph", (e) => {
                 0,
                 {
                     "start": startStr,
-                    "end":   endStr,
+                    "end": endStr,
                 },
             );
 
@@ -632,7 +713,7 @@ routerAdd("GET", "/api/failedTestsGraph", (e) => {
 
         stationEntries.sort((a, b) => b[2] - a[2]);
 
-        for (let [stName, testsObj, ] of stationEntries) {
+        for (let [stName, testsObj,] of stationEntries) {
             // Only keep if we have fails
             if (Object.keys(testsObj).length > 0) {
                 cleanedData[stName] = testsObj;

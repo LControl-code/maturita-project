@@ -31,7 +31,7 @@ class DbUpdatesEmitter extends EventEmitter {
         console.log('[DEBUG] Setting up pb.collection("test_data").subscribe("*")');
 
         pb.collection('test_data').subscribe('*', (e) => {
-            console.log('[DEBUG] PB subscription triggered:', e);
+            console.log('[DEBUG] PB subscription triggered');
 
             // Clear any existing debounce
             if (this.debounceTimer) {
@@ -47,7 +47,7 @@ class DbUpdatesEmitter extends EventEmitter {
                 for (const tag of ERROR_TAGS) {
                     console.log(`[DEBUG] Revalidating tag: ${tag}`);
                     try {
-                        revalidateTag(tag);
+                        await revalidateTag(tag); // handle the promise
                     } catch (err) {
                         console.error(`[DEBUG] Failed to revalidate tag "${tag}":`, err);
                     }
